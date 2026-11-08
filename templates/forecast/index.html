@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Preparation Recommendations - AI Demand Forecasting{% endblock %}
+{% block header_title %}AI Food Demand Forecasting & Kitchen Prep Plan{% endblock %}
+{% block header_subtitle %}Calculates daily item demand and optimal batch preparation quantities using scikit-learn{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Scenario Filters & Retrain Button -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            <form method="GET" action="{{ url_for('forecast.index') }}" class="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Target Date</label>
+                    <input type="date" name="date" value="{{ metadata.target_date }}"
+                           class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Day Type</label>
+                    <select name="day_type" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                        <option value="weekday" {% if metadata.day_type == 'weekday' %}selected{% endif %}>Regular Weekday</option>
+                        <option value="weekend" {% if metadata.day_type == 'weekend' %}selected{% endif %}>Weekend Service</option>
+                        <option value="office_party" {% if metadata.day_type == 'office_party' %}selected{% endif %}>Office / Corporate Party</option>
+                        <option value="birthday_celebration" {% if metadata.day_type == 'birthday_celebration' %}selected{% endif %}>Birthday Celebration</option>
+                        <option value="festival" {% if metadata.day_type == 'festival' %}selected{% endif %}>Festival / Holiday Peak</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Expected Customers</label>
+                    <input type="number" name="customers" value="{{ metadata.customer_count }}" min="20" max="600"
+                           class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1">Weather Forecast</label>
+                    <div class="flex space-x-1.5">
+                        <select name="weather" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                            <option value="Sunny" {% if metadata.weather_condition == 'Sunny' %}selected{% endif %}>Sunny</option>
+                            <option value="Rainy" {% if metadata.weather_condition == 'Rainy' %}selected{% endif %}>Rainy</option>
+                            <option value="Cloudy" {% if metadata.weather_condition == 'Cloudy' %}selected{% endif %}>Cloudy</option>
+                            <option value="Stormy" {% if metadata.weather_condition == 'Stormy' %}selected{% endif %}>Stormy</option>
+                            <option value="Cold" {% if metadata.weather_condition == 'Cold' %}selected{% endif %}>Cold</option>
+                        </select>
+                        <button type="submit" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition" title="Recalculate">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="flex items-center space-x-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                <a href="{{ url_for('forecast.simulator') }}" 
+                   class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg transition flex items-center">
+                    <i class="fa-solid fa-sliders mr-1.5 text-emerald-600"></i> What-If Simulator
+                </a>
+
+                <form method="POST" action="{{ url_for('forecast.retrain') }}" onsubmit="return confirm('Trigger model training now? Compares RandomForest and GradientBoosting regressors.');">
+                    <button type="submit" 
+                            class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center">
+                        <i class="fa-solid fa-microchip mr-1.5"></i> Re-Train AI Model
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Financial & Batch Preparation Summary KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Recommended Total Prep</span>
+            <div class="text-2xl font-bold text-emerald-600">{{ summary.total_prep_units }} portions</div>
+            <p class="text-[11px] text-slate-400 mt-1">
+                Forecasted: {{ summary.total_predicted_demand }} + {{ summary.total_buffer_units }} safety buffer
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Estimated Prep Investment</span>
+            <div class="text-2xl font-bold text-slate-900">{{ summary.total_prep_cost|currency }}</div>
+            <p class="text-[11px] text-slate-400 mt-1">
+                Direct ingredient & kitchen labor cost
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Projected Food Revenue</span>
+            <div class="text-2xl font-bold text-blue-600">{{ summary.total_expected_revenue|currency }}</div>
+            <p class="text-[11px] text-slate-400 mt-1">
+                From predicted sales fulfillment
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Projected Gross Margin</span>
+            <div class="text-2xl font-bold text-purple-600">{{ summary.projected_margin_percent }}%</div>
+            <p class="text-[11px] text-slate-400 mt-1">
+                Net Contribution: {{ summary.projected_gross_profit|currency }}
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Recommendations Data Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">
+                    Daily Batch Preparation Quantities (Formula: Target Pool - Available Stock)
+                </h3>
+                <p class="text-xs text-slate-500">
+                    Safety Buffer Margin: {{ metadata.safety_buffer_percent }}% &bull; Day Type: <span class="font-semibold text-slate-700 capitalize">{{ metadata.day_type }}</span> &bull; Expected Footfall: <span class="font-semibold text-slate-700">{{ metadata.customer_count }}</span>
+                </p>
+            </div>
+            <span class="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-md font-semibold">
+                <i class="fa-solid fa-shield-halved mr-1 text-emerald-600"></i> Stockout Protected
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Menu Item</th>
+                        <th class="px-4 py-3.5 text-center">Shelf Life</th>
+                        <th class="px-4 py-3.5 text-center">Current Stock</th>
+                        <th class="px-4 py-3.5 text-center">Predicted Demand</th>
+                        <th class="px-4 py-3.5 text-center">Safety Cushion</th>
+                        <th class="px-5 py-3.5 text-center font-bold text-emerald-800 bg-emerald-50/50">Recommended Prep</th>
+                        <th class="px-4 py-3.5 text-right">Est. Cost</th>
+                        <th class="px-4 py-3.5 text-right">Exp. Revenue</th>
+                        <th class="px-4 py-3.5 text-center">Stock Health</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for rec in recommendations %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5">
+                            <span class="font-bold text-slate-900 block text-xs">{{ rec.item_name }}</span>
+                            <span class="text-[10px] text-slate-400">{{ rec.category }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-medium
+                                {% if rec.shelf_life_hours <= 6 %}bg-rose-50 text-rose-700 border border-rose-200
+                                {% elif rec.shelf_life_hours <= 12 %}bg-amber-50 text-amber-700 border border-amber-200
+                                {% else %}bg-slate-100 text-slate-600{% endif %}">
+                                {{ rec.shelf_life_hours }} hrs
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-semibold text-slate-700">
+                            {{ rec.current_stock }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-semibold text-blue-700">
+                            {{ rec.predicted_demand }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center text-slate-500 font-medium">
+                            +{{ rec.safety_buffer_units }}
+                        </td>
+                        <td class="px-5 py-3.5 text-center bg-emerald-50/30">
+                            <span class="px-3 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white shadow-2xs">
+                                +{{ rec.recommended_prep_qty }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-medium text-slate-700">
+                            {{ rec.estimated_prep_cost|currency }}
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-bold text-slate-900">
+                            {{ rec.expected_revenue|currency }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
+                                {% if rec.badge_color == 'red' %}bg-rose-100 text-rose-800
+                                {% elif rec.badge_color == 'amber' %}bg-amber-100 text-amber-800
+                                {% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                                {{ rec.stock_alert }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- AI Model Evaluation & Feature Importance Technical Card -->
+    {% if metrics %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900">Scikit-Learn Model Benchmark & Accuracy</h3>
+                    <p class="text-xs text-slate-500">Trained on {{ metrics.training_samples }} historical sales data points</p>
+                </div>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                Champion: {{ metrics.champion_model }}
+            </span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div class="p-3 bg-slate-50 rounded-xl">
+                <span class="text-[10px] font-semibold text-slate-500 uppercase block">R² Coefficient</span>
+                <span class="text-lg font-bold text-slate-900">{{ metrics.r2_score }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+                <span class="text-[10px] font-semibold text-slate-500 uppercase block">Mean Absolute Error</span>
+                <span class="text-lg font-bold text-slate-900">{{ metrics.mae }} portions</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+                <span class="text-[10px] font-semibold text-slate-500 uppercase block">Root Mean Squared Error</span>
+                <span class="text-lg font-bold text-slate-900">{{ metrics.rmse }}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl">
+                <span class="text-[10px] font-semibold text-slate-500 uppercase block">Mean Absolute % Error</span>
+                <span class="text-lg font-bold text-slate-900">{{ metrics.mape_percent }}%</span>
+            </div>
+        </div>
+
+        {% if metrics.feature_importances %}
+        <div>
+            <h4 class="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wider">Top Driving Predictive Features</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {% for f in metrics.feature_importances[:6] %}
+                <div class="p-2.5 border border-slate-100 rounded-lg bg-slate-50/50">
+                    <div class="flex justify-between text-[11px] font-medium mb-1">
+                        <span class="text-slate-700 truncate mr-2">{{ f.feature }}</span>
+                        <span class="text-purple-700 font-bold">{{ f.importance }}%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-purple-600 h-1.5 rounded-full" style="width: {{ f.importance * 2 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

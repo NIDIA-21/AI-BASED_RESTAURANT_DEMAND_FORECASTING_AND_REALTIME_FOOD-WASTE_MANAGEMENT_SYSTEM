@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}NGO Community Food Recovery Portal - Smart Restaurant ERP{% endblock %}
+{% block header_title %}NGO Community Food Recovery Portal{% endblock %}
+{% block header_subtitle %}Connecting surplus fresh meals with local food recovery organizations & hunger relief charities{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-6xl mx-auto">
+
+    <!-- Community Hero Banner -->
+    <div class="bg-gradient-to-r from-emerald-800 to-teal-700 rounded-3xl p-8 text-white shadow-md relative overflow-hidden">
+        <div class="relative z-10 max-w-2xl">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-xs mb-3">
+                <i class="fa-solid fa-hand-holding-heart mr-1.5 text-emerald-300"></i> ZERO FOOD WASTE INITIATIVE
+            </span>
+            <h2 class="text-2xl font-extrabold tracking-tight mb-2">
+                Rescue Fresh Surplus Food for Your Community
+            </h2>
+            <p class="text-xs text-emerald-100 leading-relaxed mb-4">
+                Our kitchen uses AI to minimize excess prep. Any freshly prepared unsold portions nearing their shelf-life window are published here in real time for immediate collection by verified NGOs, shelters, and hunger relief volunteers.
+            </p>
+            <div class="flex items-center space-x-6 text-xs text-emerald-50">
+                <div>
+                    <span class="text-lg font-bold block text-white">{{ total_meals_saved }}</span>
+                    <span>Total Meals Claimed</span>
+                </div>
+                <div class="h-6 w-px bg-emerald-600"></div>
+                <div>
+                    <span class="text-lg font-bold block text-white">{{ total_co2 }} kg</span>
+                    <span>CO₂ Avoided</span>
+                </div>
+                <div class="h-6 w-px bg-emerald-600"></div>
+                <div>
+                    <span class="text-lg font-bold block text-white">100% Free</span>
+                    <span>Sanitary Packed</span>
+                </div>
+            </div>
+        </div>
+        <div class="hidden lg:block absolute -right-6 -bottom-10 opacity-15 text-white text-9xl">
+            <i class="fa-solid fa-plate-wheat"></i>
+        </div>
+    </div>
+
+    <!-- Live Available Food Donations Grid -->
+    <div>
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Available Fresh Food Batches for Pickup</h3>
+                <p class="text-xs text-slate-500">Claim batches below for immediate distribution to community beneficiaries</p>
+            </div>
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                {{ available_items|length }} Batches Available Right Now
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for item in available_items %}
+            <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between">
+                <div>
+                    <!-- Category & Expiry Countdown Badge -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.product.category }}</span>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center
+                            {% if item.hours_remaining <= 3 %}bg-rose-100 text-rose-800 border border-rose-200 animate-pulse
+                            {% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+                            <i class="fa-regular fa-clock mr-1"></i> Expires in {{ item.hours_remaining }}h
+                        </span>
+                    </div>
+
+                    <!-- Food Title & Quantity -->
+                    <h4 class="text-base font-bold text-slate-900 mb-1">{{ item.product.item_name }}</h4>
+                    <div class="flex items-baseline space-x-2 mb-3">
+                        <span class="text-2xl font-black text-emerald-600">{{ item.surplus_qty }}</span>
+                        <span class="text-xs font-semibold text-slate-500">portions ready</span>
+                    </div>
+
+                    <!-- Description & Packaging Details -->
+                    <div class="bg-slate-50 rounded-xl p-3 mb-4 text-xs text-slate-600 space-y-1">
+                        <p class="flex items-center">
+                            <i class="fa-solid fa-box-archive text-slate-400 mr-2 text-[11px]"></i>
+                            <span>{{ item.notes or 'Prepared fresh, packed in sealed containers.' }}</span>
+                        </p>
+                        <p class="flex items-center text-slate-500 text-[11px]">
+                            <i class="fa-solid fa-location-dot text-slate-400 mr-2"></i>
+                            <span>Pick up at: Restaurant Kitchen Dispatch Desk</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Claim Button with Modal Trigger -->
+                <div>
+                    <button type="button" 
+                            onclick="openClaimModal({{ item.id }}, '{{ item.product.item_name|escape }}', {{ item.surplus_qty }})"
+                            class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center">
+                        <i class="fa-solid fa-hand-holding-heart mr-1.5"></i> Claim This Donation
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center">
+                <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center text-2xl mb-4">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h4 class="text-base font-bold text-slate-900">All Surplus Meals Have Been Claimed!</h4>
+                <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+                    There are currently no unclaimed surplus food batches. New batches appear automatically at the close of lunch (3:30 PM) and dinner (10:30 PM) shifts.
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recent Claimed Recovery History -->
+    {% if claimed_history %}
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
+        <h3 class="text-sm font-bold text-slate-900 mb-1">Recent Community Rescues</h3>
+        <p class="text-xs text-slate-500 mb-4">Honor roll of local organizations making a difference</p>
+
+        <div class="divide-y divide-slate-100">
+            {% for claim in claimed_history %}
+            <div class="py-3 flex items-center justify-between text-xs">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                        <i class="fa-solid fa-truck-pickup"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-slate-900 block">{{ claim.claimed_by_ngo }}</span>
+                        <span class="text-slate-500 text-[11px]">Rescued {{ claim.surplus_qty }} portions of {{ claim.product.item_name }}</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-[11px] font-semibold text-teal-700 block">{{ claim.co2_kg_saved }} kg CO₂ saved</span>
+                    <span class="text-[10px] text-slate-400">{{ claim.claimed_at.strftime('%d %b, %I:%M %p') if claim.claimed_at else '' }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- CLAIM DONATION MODAL -->
+<div id="claimModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-xl relative animate-in fade-in duration-150">
+        <button onclick="closeClaimModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+            <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Claim Food Donation</h3>
+                <p class="text-xs text-slate-500" id="modalSubTitle">Batch Details</p>
+            </div>
+        </div>
+
+        <form id="claimForm" method="POST" action="" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">NGO / Organization Name *</label>
+                <input type="text" name="ngo_name" required placeholder="e.g. Robin Hood Army or Feeding India"
+                       class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Representative Phone Number *</label>
+                <input type="tel" name="contact_phone" required placeholder="+91 98765 43210"
+                       class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Estimated Pickup Time (ETA)</label>
+                <input type="text" name="pickup_eta" placeholder="e.g. In 30 minutes (before 8:30 PM)"
+                       class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+
+            <div class="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-[11px] leading-relaxed">
+                <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>
+                By confirming this claim, our kitchen will reserve these portions at the dispatch counter and generate your Digital Pickup Pass.
+            </div>
+
+            <div class="flex items-center space-x-3 pt-2">
+                <button type="button" onclick="closeClaimModal()" 
+                        class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition">
+                    Confirm Claim & Pickup
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openClaimModal(surplusId, itemName, qty) {
+    document.getElementById('modalSubTitle').innerText = 'Claiming ' + qty + ' portions of ' + itemName;
+    document.getElementById('claimForm').action = '/surplus/claim/' + surplusId;
+    document.getElementById('claimModal').classList.remove('hidden');
+}
+
+function closeClaimModal() {
+    document.getElementById('claimModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

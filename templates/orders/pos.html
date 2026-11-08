@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Menu & Live Ordering - {{ restaurant_name }}{% endblock %}
+{% block header_title %}
+    {% if active_role == 'customer' %}
+        🍽️ Guest Dining Menu & Table Ordering
+    {% else %}
+        Point of Sale (POS) & Live Order Entry
+    {% endif %}
+{% endblock %}
+{% block header_subtitle %}
+    {% if active_role == 'customer' %}
+        Explore our chef-crafted menu and order freshly prepared gourmet dishes directly to your table
+    {% else %}
+        Instant order taking with real-time atomic inventory deduction and kitchen KDS synchronization
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- POS Header & Sales Summary Counters (Elevated for Customer & Staff) -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-6 text-white shadow-md flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-900/50">
+                <i class="fa-solid fa-utensils"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h3 class="text-base font-extrabold text-white tracking-wide">
+                        {% if active_role == 'customer' %}
+                            Welcome to {{ restaurant_name }}
+                        {% else %}
+                            Smart POS & Real-Time Stock Engine
+                        {% endif %}
+                    </h3>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Chef's Fresh Kitchen
+                    </span>
+                </div>
+                <p class="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
+                    {% if active_role == 'customer' %}
+                        Prepared to order with zero preservative ingredients. Select your favorite dishes and click 'Order' to send directly to our kitchen!
+                    {% else %}
+                        Every order safely deducts available inventory in an atomic transaction and streams to the KDS within 3 seconds.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-6 bg-slate-800/60 backdrop-blur-xs px-5 py-3 rounded-xl border border-slate-700/60">
+            <div class="text-right">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Today's Sales</span>
+                <span class="text-lg font-black text-emerald-400">{{ today_total_sales|currency }}</span>
+            </div>
+            <div class="h-8 w-px bg-slate-700"></div>
+            <div class="text-right">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Orders Placed</span>
+                <span class="text-lg font-black text-white">{{ today_orders_count }}</span>
+            </div>
+            {% if active_role in ['admin', 'restaurant_manager', 'inventory_staff'] %}
+            <a href="{{ url_for('orders.orders_list') }}" 
+               class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center shadow-sm">
+                <i class="fa-solid fa-kitchen-set mr-1.5"></i> Kitchen Display (KDS)
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Category Filter Bar with Appetizing Category Icons & Search -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Visual Category Pills -->
+        <div class="flex items-center space-x-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
+            <a href="{{ url_for('orders.pos_view', category='all', q=search_query) }}" 
+               class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center space-x-1.5
+               {% if selected_category == 'all' %}bg-slate-900 text-white shadow-md ring-2 ring-emerald-500/50{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-100{% endif %}">
+                <span>🍽️</span> <span>All Dishes</span>
+            </a>
+
+            {% for cat in categories %}
+            <a href="{{ url_for('orders.pos_view', category=cat, q=search_query) }}" 
+               class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center space-x-1.5
+               {% if selected_category == cat %}bg-slate-900 text-white shadow-md ring-2 ring-emerald-500/50{% else %}bg-white border border-slate-200 text-slate-700 hover:bg-slate-100{% endif %}">
+                {% if 'Starter' in cat %}<span>🍢</span>
+                {% elif 'Main' in cat %}<span>🍛</span>
+                {% elif 'Dessert' in cat %}<span>🍰</span>
+                {% elif 'Beverage' in cat or 'Drink' in cat %}<span>🍹</span>
+                {% elif 'Platter' in cat %}<span>🍱</span>
+                {% else %}<span>🍴</span>{% endif %}
+                <span>{{ cat }}</span>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- Search Bar with Live Filter -->
+        <form method="GET" action="{{ url_for('orders.pos_view') }}" class="w-full md:w-72">
+            <input type="hidden" name="category" value="{{ selected_category }}">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" name="q" value="{{ search_query }}"
+                       placeholder="Search dishes by name or ingredient..."
+                       class="w-full pl-9 pr-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none shadow-2xs">
+            </div>
+        </form>
+    </div>
+
+    <!-- Visually Engaging Menu Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for item in menu_items %}
+        {% set stock = item.inventory.current_stock_qty if item.inventory else 0 %}
+        {% set min_thresh = item.inventory.min_threshold_qty if item.inventory else 10 %}
+        
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col justify-between overflow-hidden group
+            {% if stock == 0 %}opacity-75 bg-slate-50/60{% endif %}">
+            
+            <div>
+                <!-- Top Dish Photo with Smooth Hover Zoom Effect -->
+                <div class="relative h-48 w-full overflow-hidden bg-slate-100">
+                    <img src="{{ item.display_image }}" alt="{{ item.item_name }}" 
+                         class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108 group-hover:brightness-105"
+                         loading="lazy">
+                    
+                    <!-- Dark Gradient Overlay for High Contrast Text -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
+
+                    <!-- Category & Chef Tag -->
+                    <div class="absolute top-3 left-3 flex items-center space-x-1.5">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900/80 backdrop-blur-xs text-white border border-white/20">
+                            {{ item.category }}
+                        </span>
+                        {% if 'Dessert' in item.category or 'Platter' in item.category or 'Biryani' in item.item_name %}
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/90 text-slate-950 shadow-xs">
+                            <i class="fa-solid fa-star text-[9px] mr-0.5"></i> Popular
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Stock Availability Pill -->
+                    <div class="absolute top-3 right-3">
+                        {% if stock == 0 %}
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white shadow-sm border border-white/20">
+                                Sold Out
+                            </span>
+                        {% elif stock <= min_thresh %}
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-slate-950 shadow-sm border border-white/20 animate-pulse">
+                                Only {{ stock }} left
+                            </span>
+                        {% else %}
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-600/90 backdrop-blur-xs text-white shadow-sm border border-white/20">
+                                In Stock ({{ stock }})
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Price Pill on Image -->
+                    <div class="absolute bottom-3 left-3">
+                        <div class="flex items-baseline space-x-1 bg-slate-900/90 backdrop-blur-xs px-3 py-1 rounded-xl border border-white/20 shadow-sm">
+                            <span class="text-base font-black text-emerald-400 tracking-tight">{{ item.unit_price|currency }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Prep Time / Shelf Life -->
+                    <div class="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-300 bg-slate-900/70 backdrop-blur-xs px-2 py-0.5 rounded-lg border border-white/10">
+                        <i class="fa-regular fa-clock mr-1"></i> Shelf: {{ item.shelf_life_hours }}h
+                    </div>
+                </div>
+
+                <!-- Card Content -->
+                <div class="p-4">
+                    <!-- Title & Diet Dot -->
+                    <div class="flex items-start justify-between mb-1.5">
+                        <h4 class="text-sm font-extrabold text-slate-900 leading-snug group-hover:text-emerald-700 transition">
+                            {{ item.item_name }}
+                        </h4>
+                        <!-- Dietary Dot (Veg/Non-veg) -->
+                        <span class="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ml-1.5
+                            {% if 'Chicken' in item.item_name or 'Salmon' in item.item_name or 'Calamari' in item.item_name or 'Rogan Josh' in item.item_name or 'Lamb' in item.item_name or 'Meat' in item.item_name %}
+                                border-rose-600 text-rose-600
+                            {% else %}
+                                border-emerald-600 text-emerald-600
+                            {% endif %}" title="Dietary Indicator">
+                            <i class="fa-solid fa-circle text-[7px]"></i>
+                        </span>
+                    </div>
+
+                    <!-- Description -->
+                    <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">
+                        {{ item.description or 'Artisanal dish crafted fresh with seasonal farm-sourced ingredients.' }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Interactive Checkout Action Form -->
+            <div class="p-4 pt-0">
+                <form method="POST" action="{{ url_for('orders.create_order') }}" class="pt-3 border-t border-slate-100 space-y-2.5">
+                    <input type="hidden" name="item_id" value="{{ item.id }}">
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Portions with Stepper -->
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Quantity</label>
+                            <div class="flex items-center border border-slate-300 rounded-lg overflow-hidden bg-white">
+                                <button type="button" 
+                                        onclick="adjustQty('qty-{{ item.id }}', -1, {{ stock }})"
+                                        class="px-2 py-1 text-slate-500 hover:bg-slate-100 font-bold text-xs transition"
+                                        {% if stock == 0 %}disabled{% endif %}>-</button>
+                                <input type="number" id="qty-{{ item.id }}" name="quantity" value="1" min="1" max="{{ stock if stock > 0 else 1 }}" 
+                                       {% if stock == 0 %}disabled{% endif %}
+                                       class="w-full text-center text-xs font-bold py-1 border-none outline-none bg-transparent">
+                                <button type="button" 
+                                        onclick="adjustQty('qty-{{ item.id }}', 1, {{ stock }})"
+                                        class="px-2 py-1 text-slate-500 hover:bg-slate-100 font-bold text-xs transition"
+                                        {% if stock == 0 %}disabled{% endif %}>+</button>
+                            </div>
+                        </div>
+
+                        <!-- Table / Guest Input -->
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Table / Guest</label>
+                            <input type="text" name="customer_name" 
+                                   value="{% if active_role == 'customer' %}{{ current_user.username }}{% else %}Table 4{% endif %}" 
+                                   {% if stock == 0 %}disabled{% endif %}
+                                   class="w-full px-2.5 py-1 text-xs border border-slate-300 rounded-lg focus:ring-1 focus:ring-emerald-500 font-medium">
+                        </div>
+                    </div>
+
+                    <!-- Order Action Button -->
+                    {% if stock > 0 %}
+                    <button type="submit" 
+                            class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm hover:shadow-md transition duration-200 flex items-center justify-center space-x-1.5 active:scale-98">
+                        <i class="fa-solid fa-cart-plus text-xs"></i>
+                        <span>Order Now &bull; {{ item.unit_price|currency }}</span>
+                    </button>
+                    {% else %}
+                    <button type="button" disabled 
+                            class="w-full py-2.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl cursor-not-allowed flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-ban text-xs"></i>
+                        <span>Currently Sold Out</span>
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- Quantity Adjustment Script -->
+<script>
+function adjustQty(inputId, delta, maxStock) {
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    let current = parseInt(el.value) || 1;
+    let next = current + delta;
+    if (next < 1) next = 1;
+    if (next > maxStock) next = maxStock;
+    el.value = next;
+}
+</script>
+{% endblock %}

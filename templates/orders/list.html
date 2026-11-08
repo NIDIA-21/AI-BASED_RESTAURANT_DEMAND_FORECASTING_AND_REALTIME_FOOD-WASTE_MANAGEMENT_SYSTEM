@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}Kitchen Order Monitor - Smart Restaurant ERP{% endblock %}
+{% block header_title %}Kitchen Display System (KDS) & Order Monitor{% endblock %}
+{% block header_subtitle %}Real-time live queue with instant reactive state management and POS synchronization{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Status Tabs & Real-Time Sync Indicator -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <!-- Filter Tabs with Live Dynamic Counters -->
+        <div class="flex items-center space-x-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            <a href="{{ url_for('orders.orders_list', status='all') }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if selected_status == 'all' %}bg-slate-900 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                All Orders 
+                <span id="counter-all" class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if selected_status == 'all' %}bg-slate-700 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">
+                    {{ status_counts.all }}
+                </span>
+            </a>
+
+            <a href="{{ url_for('orders.orders_list', status='pending') }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if selected_status == 'pending' %}bg-amber-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                <i class="fa-regular fa-clock mr-1 text-[11px]"></i> Pending 
+                <span id="counter-pending" class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if selected_status == 'pending' %}bg-amber-800 text-white{% else %}bg-amber-100 text-amber-800{% endif %}">
+                    {{ status_counts.pending }}
+                </span>
+            </a>
+
+            <a href="{{ url_for('orders.orders_list', status='preparing') }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if selected_status == 'preparing' %}bg-blue-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                <i class="fa-solid fa-fire mr-1 text-[11px]"></i> Preparing 
+                <span id="counter-preparing" class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if selected_status == 'preparing' %}bg-blue-800 text-white{% else %}bg-blue-100 text-blue-800{% endif %}">
+                    {{ status_counts.preparing }}
+                </span>
+            </a>
+
+            <a href="{{ url_for('orders.orders_list', status='completed') }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if selected_status == 'completed' %}bg-emerald-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                <i class="fa-solid fa-check-double mr-1 text-[11px]"></i> Completed 
+                <span id="counter-completed" class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if selected_status == 'completed' %}bg-emerald-800 text-white{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                    {{ status_counts.completed }}
+                </span>
+            </a>
+
+            <a href="{{ url_for('orders.orders_list', status='cancelled') }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if selected_status == 'cancelled' %}bg-rose-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                Cancelled 
+                <span id="counter-cancelled" class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if selected_status == 'cancelled' %}bg-rose-800 text-white{% else %}bg-rose-100 text-rose-800{% endif %}">
+                    {{ status_counts.cancelled }}
+                </span>
+            </a>
+        </div>
+
+        <!-- Live Sync Status & New Order Button -->
+        <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-end">
+            <!-- Pulsing Sync Indicator -->
+            <div class="inline-flex items-center space-x-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-800">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+                </span>
+                <span id="syncStatusText">POS Sync Active (3s)</span>
+            </div>
+
+            <a href="{{ url_for('orders.pos_view') }}" 
+               class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center">
+                <i class="fa-solid fa-plus mr-1.5 text-emerald-400"></i> New Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Orders Data Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600" id="kdsTable">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Order ID</th>
+                        <th class="px-5 py-3.5">Ordered Menu Item</th>
+                        <th class="px-4 py-3.5 text-center">Portions</th>
+                        <th class="px-4 py-3.5">Guest / Table</th>
+                        <th class="px-4 py-3.5">Order Time</th>
+                        <th class="px-4 py-3.5 text-center">Status</th>
+                        <th class="px-5 py-3.5 text-right">Total Price</th>
+                        {% if active_role in ['admin', 'restaurant_manager', 'inventory_staff'] %}
+                        <th class="px-5 py-3.5 text-center">Kitchen Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" id="ordersTableBody">
+                    {% for order in orders %}
+                    <tr id="order-row-{{ order.id }}" class="hover:bg-slate-50/80 transition duration-150">
+                        <!-- Order ID -->
+                        <td class="px-5 py-3.5 font-mono font-bold text-slate-700">#{{ order.id }}</td>
+                        
+                        <!-- Item Name & Category -->
+                        <td class="px-5 py-3.5">
+                            <div class="flex items-center space-x-3">
+                                {% if order.product and order.product.display_image %}
+                                <img src="{{ order.product.display_image }}" alt="{{ order.product.item_name }}" 
+                                     class="w-10 h-10 rounded-lg object-cover border border-slate-200 shadow-2xs flex-shrink-0">
+                                {% endif %}
+                                <div>
+                                    <span class="font-bold text-slate-900 block text-xs">{{ order.product.item_name if order.product else 'Item Removed' }}</span>
+                                    <span class="text-[10px] text-slate-400">{{ order.product.category if order.product else '' }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Quantity -->
+                        <td class="px-4 py-3.5 text-center font-extrabold text-slate-900 text-sm">
+                            {{ order.quantity }}x
+                        </td>
+
+                        <!-- Guest / Table -->
+                        <td class="px-4 py-3.5 text-slate-700 font-medium">
+                            <i class="fa-solid fa-chair text-slate-400 mr-1 text-[10px]"></i>
+                            {{ order.customer_name or (order.customer.username if order.customer else 'Walk-in') }}
+                        </td>
+
+                        <!-- Order Time -->
+                        <td class="px-4 py-3.5 text-slate-500 text-[11px]">
+                            {{ order.order_time.strftime('%I:%M %p') if order.order_time else 'N/A' }}
+                        </td>
+
+                        <!-- Status Badge (UI Urgency) -->
+                        <td class="px-4 py-3.5 text-center" id="status-badge-container-{{ order.id }}">
+                            {% if order.status == 'completed' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                                    <i class="fa-solid fa-check mr-1 text-[11px]"></i> COMPLETED
+                                </span>
+                            {% elif order.status == 'preparing' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-600 text-white shadow-sm shadow-blue-500/40 animate-pulse">
+                                    <i class="fa-solid fa-fire mr-1 text-[11px]"></i> PREPARING
+                                </span>
+                            {% elif order.status == 'pending' %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                                    <i class="fa-regular fa-clock mr-1 text-[11px]"></i> PENDING
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                                    CANCELLED
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Total Price -->
+                        <td class="px-5 py-3.5 text-right font-bold text-slate-900">
+                            {{ order.total_price|currency }}
+                        </td>
+
+                        <!-- Interactive Action Buttons -->
+                        {% if active_role in ['admin', 'restaurant_manager', 'inventory_staff'] %}
+                        <td class="px-5 py-3.5 text-center" id="actions-container-{{ order.id }}">
+                            <div class="inline-flex items-center space-x-1.5 transition-all duration-300" id="btn-group-{{ order.id }}">
+                                {% if order.status == 'pending' %}
+                                <button type="button" 
+                                        onclick="executeKdsAction({{ order.id }}, 'preparing', this)"
+                                        class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition flex items-center shadow-xs"
+                                        title="Start cooking">
+                                    <i class="fa-solid fa-fire mr-1"></i> Cook
+                                </button>
+                                {% endif %}
+
+                                {% if order.status in ['pending', 'preparing'] %}
+                                <button type="button" 
+                                        onclick="executeKdsAction({{ order.id }}, 'completed', this)"
+                                        class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-extrabold transition flex items-center shadow-xs"
+                                        title="Mark order ready & completed">
+                                    <i class="fa-solid fa-check mr-1.5"></i> Ready
+                                </button>
+                                {% endif %}
+
+                                {% if order.status != 'cancelled' and order.status != 'completed' %}
+                                <button type="button" 
+                                        onclick="executeKdsAction({{ order.id }}, 'cancelled', this)"
+                                        class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold transition"
+                                        title="Cancel order and restore stock">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if order.status == 'completed' %}
+                                <span class="text-[11px] font-semibold text-emerald-600 flex items-center">
+                                    <i class="fa-solid fa-circle-check mr-1"></i> Ready for Table
+                                </span>
+                                {% elif order.status == 'cancelled' %}
+                                <span class="text-[11px] text-slate-400 italic">Stock Restored</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr id="emptyRow">
+                        <td colspan="8" class="text-center py-12 text-slate-400 text-xs">
+                            <i class="fa-solid fa-inbox text-3xl text-slate-300 block mb-2"></i>
+                            No orders currently found for the selected view.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Interactive KDS Reactive Script & Auto-Refresh Polling -->
+<script>
+const CURRENT_STATUS_FILTER = "{{ selected_status }}";
+const USER_ROLE = "{{ active_role }}";
+const CAN_MANAGE_ORDERS = ["admin", "restaurant_manager", "inventory_staff"].includes(USER_ROLE);
+
+// 1. Reactive AJAX action execution for [✔ Ready] and [✖ Cancel]
+async function executeKdsAction(orderId, newStatus, btnElement) {
+    if (newStatus === 'cancelled') {
+        const ok = confirm("Cancel Order #" + orderId + "? Ordered items will be returned to inventory stock.");
+        if (!ok) return;
+    }
+
+    // Disable button to prevent duplicate clicks
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>';
+    }
+
+    try {
+        const response = await fetch('/orders/update-status/' + orderId + '/' + newStatus, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            // Update Row Visually
+            updateOrderRowDOM(orderId, newStatus);
+
+            // Dynamically update top header counter badges
+            if (data.status_counts) {
+                updateHeaderCounters(data.status_counts);
+            }
+
+            // Flash Row with brief highlight
+            const row = document.getElementById('order-row-' + orderId);
+            if (row) {
+                row.classList.add(newStatus === 'completed' ? 'bg-emerald-50' : 'bg-rose-50');
+                setTimeout(() => {
+                    row.classList.remove('bg-emerald-50', 'bg-rose-50');
+                }, 1500);
+            }
+        } else {
+            alert(data.message || 'Error updating order status.');
+            if (btnElement) btnElement.disabled = false;
+        }
+    } catch (err) {
+        console.error('KDS action error:', err);
+        // Fallback: standard form submit if fetch fails
+        window.location.reload();
+    }
+}
+
+function updateOrderRowDOM(orderId, newStatus) {
+    const badgeContainer = document.getElementById('status-badge-container-' + orderId);
+    const actionsContainer = document.getElementById('actions-container-' + orderId);
+
+    if (badgeContainer) {
+        if (newStatus === 'completed') {
+            badgeContainer.innerHTML = `
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                    <i class="fa-solid fa-check mr-1 text-[11px]"></i> COMPLETED
+                </span>
+            `;
+        } else if (newStatus === 'preparing') {
+            badgeContainer.innerHTML = `
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-600 text-white shadow-sm shadow-blue-500/40 animate-pulse">
+                    <i class="fa-solid fa-fire mr-1 text-[11px]"></i> PREPARING
+                </span>
+            `;
+        } else if (newStatus === 'cancelled') {
+            badgeContainer.innerHTML = `
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                    CANCELLED
+                </span>
+            `;
+        }
+    }
+
+    if (actionsContainer && CAN_MANAGE_ORDERS) {
+        if (newStatus === 'completed') {
+            actionsContainer.innerHTML = `
+                <span class="text-[11px] font-semibold text-emerald-600 flex items-center justify-center animate-fade-in">
+                    <i class="fa-solid fa-circle-check mr-1"></i> Ready for Table
+                </span>
+            `;
+        } else if (newStatus === 'cancelled') {
+            actionsContainer.innerHTML = `
+                <span class="text-[11px] text-slate-400 italic">Stock Restored</span>
+            `;
+        } else if (newStatus === 'preparing') {
+            actionsContainer.innerHTML = `
+                <div class="inline-flex items-center space-x-1.5" id="btn-group-${orderId}">
+                    <button type="button" 
+                            onclick="executeKdsAction(${orderId}, 'completed', this)"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-extrabold transition flex items-center shadow-xs">
+                        <i class="fa-solid fa-check mr-1.5"></i> Ready
+                    </button>
+                    <button type="button" 
+                            onclick="executeKdsAction(${orderId}, 'cancelled', this)"
+                            class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `;
+        }
+    }
+}
+
+function updateHeaderCounters(counts) {
+    const elAll = document.getElementById('counter-all');
+    const elPending = document.getElementById('counter-pending');
+    const elPreparing = document.getElementById('counter-preparing');
+    const elCompleted = document.getElementById('counter-completed');
+    const elCancelled = document.getElementById('counter-cancelled');
+
+    if (elAll && counts.all !== undefined) elAll.innerText = counts.all;
+    if (elPending && counts.pending !== undefined) elPending.innerText = counts.pending;
+    if (elPreparing && counts.preparing !== undefined) elPreparing.innerText = counts.preparing;
+    if (elCompleted && counts.completed !== undefined) elCompleted.innerText = counts.completed;
+    if (elCancelled && counts.cancelled !== undefined) elCancelled.innerText = counts.cancelled;
+}
+
+// 2. Real-Time Auto-Refresh Polling Script (Synchronizes POS orders to KDS within 3 seconds)
+let pollIntervalId = null;
+
+async function pollKdsFeed() {
+    try {
+        const response = await fetch('/orders/api/live?status=' + encodeURIComponent(CURRENT_STATUS_FILTER));
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data.status === 'success' && data.orders) {
+            // Update top counters
+            if (data.status_counts) {
+                updateHeaderCounters(data.status_counts);
+            }
+
+            // Sync Table Rows
+            const tbody = document.getElementById('ordersTableBody');
+            if (!tbody) return;
+
+            data.orders.forEach(order => {
+                const existingRow = document.getElementById('order-row-' + order.id);
+                if (!existingRow) {
+                    // Prepend newly placed POS order with highlight animation!
+                    const emptyRow = document.getElementById('emptyRow');
+                    if (emptyRow) emptyRow.remove();
+
+                    const tr = document.createElement('tr');
+                    tr.id = 'order-row-' + order.id;
+                    tr.className = 'hover:bg-slate-50/80 transition duration-150 bg-emerald-50/70';
+
+                    let actionsHtml = '';
+                    if (CAN_MANAGE_ORDERS) {
+                        actionsHtml = `
+                            <td class="px-5 py-3.5 text-center" id="actions-container-${order.id}">
+                                <div class="inline-flex items-center space-x-1.5" id="btn-group-${order.id}">
+                                    <button type="button" 
+                                            onclick="executeKdsAction(${order.id}, 'completed', this)"
+                                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-extrabold transition flex items-center shadow-xs">
+                                        <i class="fa-solid fa-check mr-1.5"></i> Ready
+                                    </button>
+                                    <button type="button" 
+                                            onclick="executeKdsAction(${order.id}, 'cancelled', this)"
+                                            class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold transition">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                    }
+
+                    tr.innerHTML = `
+                        <td class="px-5 py-3.5 font-mono font-bold text-slate-700">#${order.id}</td>
+                        <td class="px-5 py-3.5">
+                            <div class="flex items-center space-x-3">
+                                ${order.display_image ? `<img src="${order.display_image}" alt="${order.item_name}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 shadow-2xs flex-shrink-0">` : ''}
+                                <div>
+                                    <span class="font-bold text-slate-900 block text-xs">${order.item_name}</span>
+                                    <span class="text-[10px] text-slate-400">${order.category}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-extrabold text-slate-900 text-sm">${order.quantity}x</td>
+                        <td class="px-4 py-3.5 text-slate-700 font-medium">
+                            <i class="fa-solid fa-chair text-slate-400 mr-1 text-[10px]"></i> ${order.customer_name}
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-500 text-[11px]">${order.order_time}</td>
+                        <td class="px-4 py-3.5 text-center" id="status-badge-container-${order.id}">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-600 text-white shadow-sm shadow-blue-500/40 animate-pulse">
+                                <i class="fa-solid fa-fire mr-1 text-[11px]"></i> PREPARING
+                            </span>
+                        </td>
+                        <td class="px-5 py-3.5 text-right font-bold text-slate-900">₹${order.total_price.toFixed(2)}</td>
+                        ${actionsHtml}
+                    `;
+
+                    tbody.insertBefore(tr, tbody.firstChild);
+
+                    // Fade back from highlight
+                    setTimeout(() => {
+                        tr.classList.remove('bg-emerald-50/70');
+                    }, 2500);
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('KDS feed poll check:', e);
+    }
+}
+
+// Start polling every 3000 ms (3 seconds)
+document.addEventListener('DOMContentLoaded', () => {
+    pollIntervalId = setInterval(pollKdsFeed, 3000);
+});
+</script>
+{% endblock %}

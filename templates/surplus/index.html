@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Surplus Food & Waste Management - Smart Restaurant ERP{% endblock %}
+{% block header_title %}Surplus Food Recovery & NGO Coordination{% endblock %}
+{% block header_subtitle %}Prevent food waste by redirecting unsold fresh portions to local hunger relief partners{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Social & Environmental Impact Counters -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+                <span class="text-xs font-semibold tracking-wide uppercase">Meals Rescued</span>
+                <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-bowl-food"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-bold text-emerald-600">{{ total_portions_saved }} portions</div>
+            <p class="text-[11px] text-slate-400 mt-1">Diverted from landfill waste</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+                <span class="text-xs font-semibold tracking-wide uppercase">CO₂ Emissions Avoided</span>
+                <span class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-seedling"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-bold text-teal-700">{{ total_co2_kg_saved }} kg CO₂</div>
+            <p class="text-[11px] text-slate-400 mt-1">~2.5 kg CO₂ reduction per meal</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+                <span class="text-xs font-semibold tracking-wide uppercase">Value Donated / Saved</span>
+                <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-bold text-slate-900">{{ total_value_recovered|currency }}</div>
+            <p class="text-[11px] text-slate-400 mt-1">Calculated at standard prep cost</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <div class="flex items-center justify-between text-slate-500 mb-2">
+                <span class="text-xs font-semibold tracking-wide uppercase">Live NGO Batches</span>
+                <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-truck-fast"></i>
+                </span>
+            </div>
+            <div class="text-2xl font-bold text-amber-600">{{ available_listings|length }} batches</div>
+            <p class="text-[11px] text-slate-400 mt-1">Awaiting NGO pickup claim</p>
+        </div>
+
+    </div>
+
+    <!-- Form: Log Leftover / Surplus Food Batch -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm">
+                    <i class="fa-solid fa-hand-holding-heart"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900">Log Surplus Food for NGO Recovery</h3>
+                    <p class="text-xs text-slate-500">List prepared leftover portions nearing expiry to immediately alert community food partners</p>
+                </div>
+            </div>
+            <a href="{{ url_for('surplus.ngo_portal') }}" target="_blank"
+               class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition flex items-center self-start sm:self-auto">
+                <i class="fa-solid fa-arrow-up-right-from-square mr-1.5 text-emerald-400"></i> Open Public NGO Portal
+            </a>
+        </div>
+
+        <form method="POST" action="{{ url_for('surplus.log_surplus') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            
+            <!-- Menu Item Selector -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Surplus Menu Item</label>
+                <select name="item_id" required 
+                        class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                    <option value="">-- Choose Prepared Food --</option>
+                    {% for item in menu_items %}
+                    <option value="{{ item.id }}">
+                        {{ item.item_name }} ({{ item.category }} - Shelf: {{ item.shelf_life_hours }}h)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Quantity -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Surplus Portions Available</label>
+                <input type="number" name="surplus_qty" value="10" min="1" max="100" required
+                       class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-bold">
+            </div>
+
+            <!-- Notes & Packaging -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Packaging / Pick-up Notes</label>
+                <input type="text" name="notes" placeholder="e.g. Packed in foil boxes; ready for pickup"
+                       class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+
+            <!-- Submit Button & Stock Checkbox -->
+            <div class="space-y-1.5">
+                <label class="flex items-center text-[11px] text-slate-500 cursor-pointer">
+                    <input type="checkbox" name="deduct_inventory" value="yes" checked class="mr-1.5 rounded text-emerald-600 focus:ring-emerald-500">
+                    Deduct from inventory stock
+                </label>
+                <button type="submit" 
+                        class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-sm transition flex items-center justify-center">
+                    <i class="fa-solid fa-share-nodes mr-1.5"></i> Publish to NGO Network
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Active Surplus Batches Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Active Surplus Food Available for Collection</h3>
+                <p class="text-xs text-slate-500">Live countdown of shelf-life hours remaining before waste expiry</p>
+            </div>
+            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">
+                {{ available_listings|length }} Batches Available
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Batch ID</th>
+                        <th class="px-5 py-3.5">Surplus Food Item</th>
+                        <th class="px-4 py-3.5 text-center">Portions Available</th>
+                        <th class="px-4 py-3.5 text-center">Shelf-Life Remaining</th>
+                        <th class="px-4 py-3.5">Logged At</th>
+                        <th class="px-4 py-3.5">Packaging Details</th>
+                        <th class="px-4 py-3.5 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for item in available_listings %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5 font-mono font-bold text-slate-500">#SUR-{{ item.id }}</td>
+                        <td class="px-5 py-3.5">
+                            <span class="font-bold text-slate-900 block text-xs">{{ item.product.item_name }}</span>
+                            <span class="text-[10px] text-slate-400">{{ item.product.category }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="text-sm font-extrabold text-emerald-600">{{ item.surplus_qty }}</span> portions
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold
+                                {% if item.hours_remaining <= 2 %}bg-rose-100 text-rose-800 border border-rose-200 animate-pulse
+                                {% elif item.hours_remaining <= 5 %}bg-amber-100 text-amber-800 border border-amber-200
+                                {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
+                                <i class="fa-regular fa-clock mr-1"></i> {{ item.hours_remaining }} hrs left
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-500 text-[11px]">
+                            {{ item.logged_at.strftime('%I:%M %p (%d %b)') if item.logged_at else 'N/A' }}
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-600 max-w-xs truncate">
+                            {{ item.notes or 'Standard sanitary food containers' }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Available for NGO
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-8 text-slate-400 text-xs">
+                            No active surplus batches right now. Kitchen waste is currently zero!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Claimed Donations History Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Claimed NGO Donation Distribution Log</h3>
+                <p class="text-xs text-slate-500">Verified food pickup records collected by partner organizations</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Claim #</th>
+                        <th class="px-5 py-3.5">Food Item</th>
+                        <th class="px-4 py-3.5 text-center">Portions</th>
+                        <th class="px-4 py-3.5">Claimed By (NGO)</th>
+                        <th class="px-4 py-3.5">Contact Phone</th>
+                        <th class="px-4 py-3.5">Claimed At</th>
+                        <th class="px-4 py-3.5 text-right">CO₂ Diverted</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for claim in claimed_listings %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5 font-mono font-bold text-slate-500">#CLM-{{ claim.id }}</td>
+                        <td class="px-5 py-3.5 font-bold text-slate-900">
+                            {{ claim.product.item_name }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-bold text-slate-800">
+                            {{ claim.surplus_qty }}
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <span class="font-bold text-slate-900 block text-xs">{{ claim.claimed_by_ngo }}</span>
+                            <span class="text-[10px] text-slate-400">{{ claim.pickup_eta }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-600 font-mono text-[11px]">
+                            {{ claim.contact_phone or 'Direct Pickup' }}
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-500 text-[11px]">
+                            {{ claim.claimed_at.strftime('%Y-%m-%d %I:%M %p') if claim.claimed_at else 'Verified' }}
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-bold text-teal-700">
+                            {{ claim.co2_kg_saved }} kg
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-6 text-slate-400 text-xs">
+                            No claimed donations recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

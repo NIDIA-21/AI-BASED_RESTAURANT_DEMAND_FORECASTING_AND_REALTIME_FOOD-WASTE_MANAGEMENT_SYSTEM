@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-10-30T18:27:40.932494+00:00",
+  "champion_model": "Gradient Boosting Regressor",
+  "r2_score": 0.9369,
+  "mae": 9.8,
+  "rmse": 16.05,
+  "mape_percent": 15.63,
+  "training_samples": 3240,
+  "train_samples": 2592,
+  "test_samples": 648,
+  "models_compared": {
+    "Random Forest Regressor": {
+      "r2_score": 0.9239,
+      "mae": 10.05,
+      "rmse": 17.62,
+      "mape_percent": 14.57
+    },
+    "Gradient Boosting Regressor": {
+      "r2_score": 0.9369,
+      "mae": 9.8,
+      "rmse": 16.05,
+      "mape_percent": 15.63
+    }
+  },
+  "feature_importances": [
+    {
+      "feature": "customer_count",
+      "importance": 44.21
+    },
+    {
+      "feature": "unit_price",
+      "importance": 17.74
+    },
+    {
+      "feature": "weather_condition_Sunny",
+      "importance": 7.45
+    },
+    {
+      "feature": "day_type_weekday",
+      "importance": 6.72
+    },
+    {
+      "feature": "item_id_14",
+      "importance": 2.74
+    },
+    {
+      "feature": "item_id_13",
+      "importance": 2.39
+    },
+    {
+      "feature": "item_id_5",
+      "importance": 2.14
+    },
+    {
+      "feature": "item_id_10",
+      "importance": 1.88
+    },
+    {
+      "feature": "day_type_birthday_celebration",
+      "importance": 1.85
+    },
+    {
+      "feature": "category_Starters",
+      "importance": 1.79
+    },
+    {
+      "feature": "item_id_15",
+      "importance": 1.3
+    },
+    {
+      "feature": "category_Main Course",
+      "importance": 1.13
+    },
+    {
+      "feature": "day_type_office_party",
+      "importance": 0.85
+    },
+    {
+      "feature": "weather_condition_Cold",
+      "importance": 0.84
+    },
+    {
+      "feature": "weather_condition_Rainy",
+      "importance": 0.79
+    }
+  ],
+  "required_features": [
+    "day_type",
+    "customer_count",
+    "item_id",
+    "day_of_week"
+  ],
+  "extended_features": [
+    "weather_condition",
+    "category",
+    "month",
+    "unit_price"
+  ]
+}

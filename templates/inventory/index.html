@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory & Restock Management - Smart Restaurant ERP{% endblock %}
+{% block header_title %}Inventory Stock & Replenishment{% endblock %}
+{% block header_subtitle %}Real-time stock monitoring, threshold alerts, and batch restocking{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Total Portions on Hand</span>
+            <div class="text-2xl font-bold text-slate-900">{{ total_portions_on_hand }} units</div>
+            <p class="text-[11px] text-slate-400 mt-1">Across {{ total_items }} active menu items</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Healthy Stock</span>
+            <div class="text-2xl font-bold text-emerald-600">{{ healthy_stock_count }} items</div>
+            <p class="text-[11px] text-slate-400 mt-1">Sufficient buffer above minimum</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Low Stock Warning</span>
+            <div class="text-2xl font-bold {% if low_stock_count > 0 %}text-amber-600{% else %}text-slate-900{% endif %}">
+                {{ low_stock_count }} items
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">At or below reorder threshold</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Out of Stock</span>
+            <div class="text-2xl font-bold {% if out_of_stock_count > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">
+                {{ out_of_stock_count }} items
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Requires immediate replenishment</p>
+        </div>
+
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center space-x-2 overflow-x-auto w-full sm:w-auto">
+            <a href="{{ url_for('inventory.index', status='all', q=search_query) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition
+               {% if filter_status == 'all' %}bg-slate-900 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                All Inventory ({{ total_items }})
+            </a>
+            <a href="{{ url_for('inventory.index', status='low', q=search_query) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if filter_status == 'low' %}bg-amber-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                Low Stock <span class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if filter_status == 'low' %}bg-amber-700 text-white{% else %}bg-amber-100 text-amber-800{% endif %}">{{ low_stock_count }}</span>
+            </a>
+            <a href="{{ url_for('inventory.index', status='out', q=search_query) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition flex items-center
+               {% if filter_status == 'out' %}bg-rose-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                Out of Stock <span class="ml-1.5 text-[10px] px-1.5 py-0.2 rounded-full {% if filter_status == 'out' %}bg-rose-700 text-white{% else %}bg-rose-100 text-rose-800{% endif %}">{{ out_of_stock_count }}</span>
+            </a>
+            <a href="{{ url_for('inventory.index', status='healthy', q=search_query) }}" 
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition
+               {% if filter_status == 'healthy' %}bg-emerald-600 text-white shadow-sm{% else %}bg-white border border-slate-200 text-slate-600 hover:bg-slate-100{% endif %}">
+                Healthy Stock ({{ healthy_stock_count }})
+            </a>
+        </div>
+
+        <form method="GET" action="{{ url_for('inventory.index') }}" class="w-full sm:w-64">
+            <input type="hidden" name="status" value="{{ filter_status }}">
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" name="q" value="{{ search_query }}"
+                       placeholder="Filter items..."
+                       class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+        </form>
+    </div>
+
+    <!-- Inventory Stock Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Menu Item</th>
+                        <th class="px-4 py-3.5">Category</th>
+                        <th class="px-4 py-3.5 text-center">Current Stock</th>
+                        <th class="px-4 py-3.5 text-center">Min Threshold</th>
+                        <th class="px-4 py-3.5 text-center">Health Status</th>
+                        <th class="px-4 py-3.5">Last Restocked</th>
+                        <th class="px-5 py-3.5 text-center">Quick Restock</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for stock in stocks %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5">
+                            <span class="font-bold text-slate-900 block text-xs">{{ stock.product.item_name }}</span>
+                            <span class="text-[10px] text-slate-400">Prep Cost: {{ stock.product.standard_prep_cost|currency }} &bull; Price: {{ stock.product.unit_price|currency }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-600 font-medium">
+                            {{ stock.product.category }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="text-sm font-extrabold {% if stock.current_stock_qty == 0 %}text-rose-600{% elif stock.is_low_stock %}text-amber-600{% else %}text-emerald-700{% endif %}">
+                                {{ stock.current_stock_qty }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 block">units</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-semibold text-slate-600">
+                            {{ stock.min_threshold_qty }} units
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
+                                {% if stock.current_stock_qty == 0 %}bg-rose-100 text-rose-800 border border-rose-200
+                                {% elif stock.is_low_stock %}bg-amber-100 text-amber-800 border border-amber-200
+                                {% else %}bg-emerald-100 text-emerald-800 border border-emerald-200{% endif %}">
+                                {{ stock.stock_status|replace('_', ' ') }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-500 text-[11px]">
+                            {{ stock.last_restocked_at.strftime('%Y-%m-%d %I:%M %p') if stock.last_restocked_at else 'Initial' }}
+                        </td>
+                        <td class="px-5 py-3.5 text-center">
+                            <form method="POST" action="{{ url_for('inventory.restock', item_id=stock.item_id) }}" class="inline-flex items-center space-x-1.5">
+                                <input type="number" name="add_qty" value="15" min="1" max="200" 
+                                       class="w-16 px-2 py-1 text-xs border border-slate-300 rounded text-center font-bold">
+                                <button type="submit" 
+                                        class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold transition flex items-center shadow-2xs"
+                                        title="Replenish Stock Batch">
+                                    <i class="fa-solid fa-plus mr-1 text-[10px]"></i> Add
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

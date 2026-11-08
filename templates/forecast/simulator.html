@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}What-If Demand Simulator - Smart Restaurant ERP{% endblock %}
+{% block header_title %}'What-If' Demand & Prep Scenario Simulator{% endblock %}
+{% block header_subtitle %}Simulate corporate events, festival peaks, weather shifts, and buffer margins{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Interactive Simulator Controls Panel -->
+    <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-md">
+        <div class="flex items-center space-x-3 mb-5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-white tracking-wide">Dynamic Event Simulation Engine</h3>
+                <p class="text-xs text-slate-400">Tweak parameters below to immediately forecast demand shifts across all menu categories</p>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('forecast.simulator') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- Event / Day Type -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Event / Day Type</label>
+                <select name="day_type" class="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <option value="office_party" {% if metadata.day_type == 'office_party' %}selected{% endif %}>🏢 Office / Corporate Party</option>
+                    <option value="birthday_celebration" {% if metadata.day_type == 'birthday_celebration' %}selected{% endif %}>🎂 Birthday Booking (Cakes & Platters)</option>
+                    <option value="festival" {% if metadata.day_type == 'festival' %}selected{% endif %}>🎉 Festival / Holiday Surge</option>
+                    <option value="weekend" {% if metadata.day_type == 'weekend' %}selected{% endif %}>🌟 Busy Weekend Dining</option>
+                    <option value="weekday" {% if metadata.day_type == 'weekday' %}selected{% endif %}>☕ Regular Midweek Service</option>
+                </select>
+            </div>
+
+            <!-- Expected Customer Footfall -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Expected Customers: <span class="text-emerald-400 font-bold" id="customerCountDisplay">{{ metadata.customer_count }}</span>
+                </label>
+                <input type="range" name="customer_count" min="40" max="500" step="10" value="{{ metadata.customer_count }}"
+                       oninput="document.getElementById('customerCountDisplay').innerText = this.value"
+                       class="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-700 rounded-lg">
+            </div>
+
+            <!-- Weather Condition -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Weather Condition</label>
+                <select name="weather" class="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <option value="Sunny" {% if metadata.weather_condition == 'Sunny' %}selected{% endif %}>☀️ Sunny & Warm (Drinks/Mocktails Surge)</option>
+                    <option value="Rainy" {% if metadata.weather_condition == 'Rainy' %}selected{% endif %}>🌧️ Heavy Rain (Chai & Hot Starters Surge)</option>
+                    <option value="Cloudy" {% if metadata.weather_condition == 'Cloudy' %}selected{% endif %}>⛅ Overcast / Mild</option>
+                    <option value="Stormy" {% if metadata.weather_condition == 'Stormy' %}selected{% endif %}>⛈️ Stormy (Dine-in Dips, Delivery Peak)</option>
+                    <option value="Cold" {% if metadata.weather_condition == 'Cold' %}selected{% endif %}>❄️ Chilly Weather (Hot Biryanis & Curries)</option>
+                </select>
+            </div>
+
+            <!-- Safety Buffer Cushion -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Safety Buffer Cushion: <span class="text-emerald-400 font-bold">{{ metadata.safety_buffer_percent }}%</span>
+                </label>
+                <div class="flex space-x-2">
+                    <select name="safety_buffer" class="w-full px-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="5" {% if metadata.safety_buffer_percent == 5 %}selected{% endif %}>5% (Minimal Buffer)</option>
+                        <option value="10" {% if metadata.safety_buffer_percent == 10 %}selected{% endif %}>10% (Balanced)</option>
+                        <option value="12" {% if metadata.safety_buffer_percent == 12 %}selected{% endif %}>12% (Standard Recommended)</option>
+                        <option value="18" {% if metadata.safety_buffer_percent == 18 %}selected{% endif %}>18% (High Demand Buffer)</option>
+                        <option value="25" {% if metadata.safety_buffer_percent == 25 %}selected{% endif %}>25% (Zero-Stockout Aggressive)</option>
+                    </select>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition shadow-sm whitespace-nowrap">
+                        Simulate
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- Projected Simulation Totals -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Total Simulated Demand</span>
+            <div class="text-2xl font-bold text-slate-900">{{ summary.total_predicted_demand }} portions</div>
+            <p class="text-[11px] text-slate-400 mt-1">+{{ summary.total_buffer_units }} safety buffer cushion</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Kitchen Prep Required</span>
+            <div class="text-2xl font-bold text-emerald-600">+{{ summary.total_prep_units }} units</div>
+            <p class="text-[11px] text-slate-400 mt-1">Net preparation after existing stock</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Simulated Prep Cost</span>
+            <div class="text-2xl font-bold text-slate-900">{{ summary.total_prep_cost|currency }}</div>
+            <p class="text-[11px] text-slate-400 mt-1">Estimated ingredients and kitchen cost</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Projected Net Profit</span>
+            <div class="text-2xl font-bold text-blue-600">{{ summary.projected_gross_profit|currency }}</div>
+            <p class="text-[11px] text-slate-400 mt-1">Margin: {{ summary.projected_margin_percent }}% on {{ summary.total_expected_revenue|currency }} revenue</p>
+        </div>
+
+    </div>
+
+    <!-- Simulated Preparation Table -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">
+                Simulated Kitchen Batch Preparation Plan (Scenario: {{ metadata.day_type|replace('_', ' ')|title }} | {{ metadata.weather_condition }} | {{ metadata.customer_count }} Customers)
+            </h3>
+            <a href="{{ url_for('forecast.index') }}" class="text-xs text-emerald-600 hover:underline font-semibold">
+                Back to Daily Forecast
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Menu Item & Category</th>
+                        <th class="px-4 py-3.5 text-center">Available Stock</th>
+                        <th class="px-4 py-3.5 text-center">Simulated Demand</th>
+                        <th class="px-4 py-3.5 text-center font-bold text-emerald-800 bg-emerald-50/50">Recommended Prep</th>
+                        <th class="px-4 py-3.5 text-right">Est. Prep Cost</th>
+                        <th class="px-4 py-3.5 text-right">Exp. Revenue</th>
+                        <th class="px-4 py-3.5 text-center">Status / Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for rec in recommendations %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5">
+                            <span class="font-bold text-slate-900 block text-xs">{{ rec.item_name }}</span>
+                            <span class="text-[10px] text-slate-400">{{ rec.category }} &bull; Shelf Life: {{ rec.shelf_life_hours }}h</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-semibold text-slate-700">
+                            {{ rec.current_stock }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-bold text-blue-700">
+                            {{ rec.predicted_demand }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center bg-emerald-50/30">
+                            <span class="px-3 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white shadow-2xs">
+                                +{{ rec.recommended_prep_qty }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-medium text-slate-700">
+                            {{ rec.estimated_prep_cost|currency }}
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-bold text-slate-900">
+                            {{ rec.expected_revenue|currency }}
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold
+                                {% if rec.badge_color == 'red' %}bg-rose-100 text-rose-800
+                                {% elif rec.badge_color == 'amber' %}bg-amber-100 text-amber-800
+                                {% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                                {{ rec.stock_alert }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
