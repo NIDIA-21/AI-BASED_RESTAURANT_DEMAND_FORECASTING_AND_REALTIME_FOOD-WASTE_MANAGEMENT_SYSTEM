@@ -8,7 +8,7 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, jsonify
 )
-from backend.models import db, ProductMenu, InventoryStock, InventoryLog
+from backend.models import db, ProductMenu, InventoryStock, InventoryLog, InventoryIngredient
 from backend.auth import login_required, role_required
 from backend.config import Config
 from flask import session
@@ -49,9 +49,17 @@ def index():
     healthy_stock_count = sum(1 for s in stocks if s.stock_status == 'healthy')
     total_portions_on_hand = sum(s.current_stock_qty for s in stocks)
 
+    # Raw ingredients tracking
+    ingredients = InventoryIngredient.query.order_by(InventoryIngredient.category, InventoryIngredient.ingredient_name).all()
+    expiring_soon_count = sum(1 for i in ingredients if i.is_expiring_soon)
+    low_ingredients_count = sum(1 for i in ingredients if i.is_low_stock)
+
     return render_template(
         'inventory/index.html',
         stocks=filtered_stocks,
+        ingredients=ingredients,
+        expiring_soon_count=expiring_soon_count,
+        low_ingredients_count=low_ingredients_count,
         total_items=total_items,
         out_of_stock_count=out_of_stock_count,
         low_stock_count=low_stock_count,

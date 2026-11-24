@@ -8,7 +8,10 @@ from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, jsonify
 )
-from backend.models import db, ProductMenu, SurplusRedistribution, InventoryStock, InventoryLog
+from backend.models import (
+    db, ProductMenu, SurplusRedistribution, InventoryStock, InventoryLog,
+    FoodWasteLog, FoodDonation, DailyFoodPrep
+)
 from backend.auth import login_required, role_required
 from backend.config import Config
 from flask import session
@@ -43,11 +46,21 @@ def index():
     total_co2_kg_saved = round(total_portions_saved * 2.5, 1)
     total_value_recovered = sum(s.estimated_value_recovered for s in all_donations)
 
+    # Food waste logs, community donations & overproduction audit
+    waste_logs = FoodWasteLog.query.order_by(FoodWasteLog.log_date.desc()).all()
+    community_donations = FoodDonation.query.order_by(FoodDonation.donation_date.desc()).all()
+    daily_preps = DailyFoodPrep.query.order_by(DailyFoodPrep.prep_date.desc()).all()
+    total_waste_loss = sum(w.cost_loss for w in waste_logs)
+
     return render_template(
         'surplus/index.html',
         menu_items=menu_items,
         available_listings=available_listings,
         claimed_listings=claimed_listings,
+        waste_logs=waste_logs,
+        community_donations=community_donations,
+        daily_preps=daily_preps,
+        total_waste_loss=total_waste_loss,
         total_portions_saved=total_portions_saved,
         claimed_portions=claimed_portions,
         total_co2_kg_saved=total_co2_kg_saved,

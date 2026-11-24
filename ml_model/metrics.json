@@ -1,87 +1,87 @@
 {
-  "timestamp": "2026-10-30T18:27:40.932494+00:00",
+  "timestamp": "2026-11-24T14:34:44.563297+00:00",
   "champion_model": "Gradient Boosting Regressor",
-  "r2_score": 0.9369,
-  "mae": 9.8,
-  "rmse": 16.05,
-  "mape_percent": 15.63,
-  "training_samples": 3240,
-  "train_samples": 2592,
-  "test_samples": 648,
+  "r2_score": 0.9192,
+  "mae": 13.9,
+  "rmse": 22.74,
+  "mape_percent": 12.79,
+  "training_samples": 1800,
+  "train_samples": 1440,
+  "test_samples": 360,
   "models_compared": {
     "Random Forest Regressor": {
-      "r2_score": 0.9239,
-      "mae": 10.05,
-      "rmse": 17.62,
-      "mape_percent": 14.57
+      "r2_score": 0.9017,
+      "mae": 15.09,
+      "rmse": 25.08,
+      "mape_percent": 13.85
     },
     "Gradient Boosting Regressor": {
-      "r2_score": 0.9369,
-      "mae": 9.8,
-      "rmse": 16.05,
-      "mape_percent": 15.63
+      "r2_score": 0.9192,
+      "mae": 13.9,
+      "rmse": 22.74,
+      "mape_percent": 12.79
     }
   },
   "feature_importances": [
     {
       "feature": "customer_count",
-      "importance": 44.21
-    },
-    {
-      "feature": "unit_price",
-      "importance": 17.74
+      "importance": 50.11
     },
     {
       "feature": "weather_condition_Sunny",
-      "importance": 7.45
+      "importance": 13.93
     },
     {
-      "feature": "day_type_weekday",
-      "importance": 6.72
+      "feature": "unit_price",
+      "importance": 11.5
     },
     {
-      "feature": "item_id_14",
-      "importance": 2.74
+      "feature": "item_id_6",
+      "importance": 5.07
     },
     {
-      "feature": "item_id_13",
-      "importance": 2.39
+      "feature": "weather_condition_Cloudy",
+      "importance": 2.41
     },
     {
-      "feature": "item_id_5",
-      "importance": 2.14
+      "feature": "item_id_7",
+      "importance": 2.05
     },
     {
-      "feature": "item_id_10",
-      "importance": 1.88
-    },
-    {
-      "feature": "day_type_birthday_celebration",
-      "importance": 1.85
-    },
-    {
-      "feature": "category_Starters",
-      "importance": 1.79
-    },
-    {
-      "feature": "item_id_15",
-      "importance": 1.3
-    },
-    {
-      "feature": "category_Main Course",
-      "importance": 1.13
-    },
-    {
-      "feature": "day_type_office_party",
-      "importance": 0.85
-    },
-    {
-      "feature": "weather_condition_Cold",
-      "importance": 0.84
+      "feature": "category_Snacks",
+      "importance": 1.93
     },
     {
       "feature": "weather_condition_Rainy",
-      "importance": 0.79
+      "importance": 1.86
+    },
+    {
+      "feature": "day_type_office_party",
+      "importance": 1.55
+    },
+    {
+      "feature": "item_id_8",
+      "importance": 1.35
+    },
+    {
+      "feature": "day_of_week",
+      "importance": 1.19
+    },
+    {
+      "feature": "category_Lunch",
+      "importance": 1.18
+    },
+    {
+      "feature": "day_type_weekend",
+      "importance": 1.06
+    },
+    {
+      "feature": "item_id_9",
+      "importance": 0.86
+    },
+    {
+      "feature": "item_id_4",
+      "importance": 0.73
     }
   ],
   "required_features": [

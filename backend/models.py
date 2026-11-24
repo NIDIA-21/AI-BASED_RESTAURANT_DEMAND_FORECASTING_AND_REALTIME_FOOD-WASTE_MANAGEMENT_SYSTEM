@@ -84,53 +84,39 @@ class ProductMenu(db.Model):
             return self.image_url.strip()
 
         name_lower = self.item_name.lower()
-        if 'paneer tikka' in name_lower:
-            return "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80"
-        elif 'honey chilli chicken' in name_lower or 'crispy' in name_lower:
-            return "https://images.unsplash.com/photo-1562967914-608f82629710?w=600&auto=format&fit=crop&q=80"
-        elif 'fries' in name_lower:
-            return "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&auto=format&fit=crop&q=80"
-        elif 'calamari' in name_lower or 'squid' in name_lower:
-            return "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=600&auto=format&fit=crop&q=80"
-        elif 'biryani' in name_lower:
+        if 'masala dosa' in name_lower or 'dosa' in name_lower:
+            return "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&auto=format&fit=crop&q=80"
+        elif 'idli' in name_lower:
+            return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80"
+        elif 'poori' in name_lower or 'puri' in name_lower:
+            return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
+        elif 'veg meals' in name_lower or 'meals' in name_lower or 'thali' in name_lower:
+            return "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80"
+        elif 'paneer rice' in name_lower or 'paneer' in name_lower:
             return "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80"
-        elif 'butter masala' in name_lower or 'naan' in name_lower:
-            return "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=600&auto=format&fit=crop&q=80"
-        elif 'salmon' in name_lower or 'fish' in name_lower:
-            return "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=600&auto=format&fit=crop&q=80"
-        elif 'risotto' in name_lower or 'mushroom' in name_lower:
-            return "https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?w=600&auto=format&fit=crop&q=80"
-        elif 'rogan josh' in name_lower or 'lamb' in name_lower:
-            return "https://images.unsplash.com/photo-1545247181-516773cae754?w=600&auto=format&fit=crop&q=80"
-        elif 'lava cake' in name_lower or 'chocolate' in name_lower:
-            return "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=600&auto=format&fit=crop&q=80"
-        elif 'cheesecake' in name_lower or 'rasmalai' in name_lower:
-            return "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=600&auto=format&fit=crop&q=80"
-        elif 'brownie' in name_lower:
-            return "https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=600&auto=format&fit=crop&q=80"
-        elif 'cold brew' in name_lower or 'coffee' in name_lower:
-            return "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=600&auto=format&fit=crop&q=80"
-        elif 'mojito' in name_lower or 'passionfruit' in name_lower:
-            return "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&auto=format&fit=crop&q=80"
-        elif 'chai' in name_lower or 'tea' in name_lower:
-            return "https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=600&auto=format&fit=crop&q=80"
-        elif 'tandoori feast' in name_lower or 'mixed grill' in name_lower:
-            return "https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80"
-        elif 'mezze' in name_lower or 'mediterranean' in name_lower:
-            return "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=600&auto=format&fit=crop&q=80"
-        elif 'slider' in name_lower or 'burger' in name_lower:
-            return "https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&auto=format&fit=crop&q=80"
+        elif 'samosa' in name_lower:
+            return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
+        elif 'sandwich' in name_lower:
+            return "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600&auto=format&fit=crop&q=80"
+        elif 'coffee' in name_lower:
+            return "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80"
+        elif 'tea' in name_lower or 'chai' in name_lower:
+            return "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=80"
+        elif 'chapati' in name_lower or 'curry' in name_lower:
+            return "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600&auto=format&fit=crop&q=80"
 
         cat_lower = self.category.lower()
-        if 'starter' in cat_lower:
-            return "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=600&auto=format&fit=crop&q=80"
-        elif 'main' in cat_lower:
-            return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80"
-        elif 'dessert' in cat_lower:
-            return "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600&auto=format&fit=crop&q=80"
-        elif 'beverage' in cat_lower or 'drink' in cat_lower:
-            return "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80"
-        return "https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80"
+        if 'breakfast' in cat_lower or 'tiffin' in cat_lower:
+            return "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&auto=format&fit=crop&q=80"
+        elif 'lunch' in cat_lower:
+            return "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80"
+        elif 'snack' in cat_lower:
+            return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
+        elif 'beverage' in cat_lower:
+            return "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80"
+        elif 'dinner' in cat_lower:
+            return "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600&auto=format&fit=crop&q=80"
+        return "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80"
 
     @property
     def profit_margin(self) -> float:
@@ -385,4 +371,201 @@ class InventoryLog(db.Model):
 
     def __repr__(self):
         return f"<InventoryLog #{self.id} Item:{self.item_id} Change:{self.change_qty} Reason:{self.reason}>"
+
+
+class InventoryIngredient(db.Model):
+    """
+    InventoryIngredient Model:
+    Raw ingredients, shelf-life, and expiry tracking to prevent raw material spoilage.
+    """
+    __tablename__ = 'inventory_ingredients'
+
+    ingredient_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ingredient_name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=False) # 'Prepared Batter', 'Produce', 'Dry Goods', 'Dairy', 'Bakery'
+    quantity_in_stock = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False) # 'kg', 'liters', 'packets'
+    cost_per_unit = db.Column(db.Float, nullable=False)
+    reorder_level = db.Column(db.Float, nullable=False)
+    expiry_date = db.Column(db.String(20), nullable=False) # 'YYYY-MM-DD'
+    storage_location = db.Column(db.String(50), default='Main Kitchen')
+
+    @property
+    def is_low_stock(self) -> bool:
+        return self.quantity_in_stock <= self.reorder_level
+
+    @property
+    def days_until_expiry(self) -> int:
+        try:
+            exp = datetime.strptime(self.expiry_date.strip(), '%Y-%m-%d').date()
+            today = datetime.now(timezone.utc).date()
+            return (exp - today).days
+        except Exception:
+            return 999
+
+    @property
+    def is_expiring_soon(self) -> bool:
+        return self.days_until_expiry <= 5
+
+    def to_dict(self):
+        return {
+            'ingredient_id': self.ingredient_id,
+            'ingredient_name': self.ingredient_name,
+            'category': self.category,
+            'quantity_in_stock': self.quantity_in_stock,
+            'unit': self.unit,
+            'cost_per_unit': self.cost_per_unit,
+            'reorder_level': self.reorder_level,
+            'expiry_date': self.expiry_date,
+            'storage_location': self.storage_location,
+            'is_low_stock': self.is_low_stock,
+            'days_until_expiry': self.days_until_expiry,
+            'is_expiring_soon': self.is_expiring_soon
+        }
+
+    def __repr__(self):
+        return f"<InventoryIngredient #{self.ingredient_id} {self.ingredient_name} ({self.quantity_in_stock} {self.unit})>"
+
+
+class MenuItemIngredient(db.Model):
+    """
+    MenuItemIngredient Model (Recipe / Bill of Materials):
+    Maps each of the 10 menu items to exact raw ingredient quantities required.
+    """
+    __tablename__ = 'menu_item_ingredients'
+
+    recipe_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    item_id = db.Column(db.Integer, db.ForeignKey('product_menu.id', ondelete='CASCADE'), nullable=False)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey('inventory_ingredients.ingredient_id', ondelete='CASCADE'), nullable=False)
+    quantity_required = db.Column(db.Float, nullable=False)
+
+    # Relationships
+    product = db.relationship('ProductMenu', backref='recipe_mappings')
+    ingredient = db.relationship('InventoryIngredient', backref='menu_usages')
+
+    def to_dict(self):
+        return {
+            'recipe_id': self.recipe_id,
+            'item_id': self.item_id,
+            'item_name': self.product.item_name if self.product else None,
+            'ingredient_id': self.ingredient_id,
+            'ingredient_name': self.ingredient.ingredient_name if self.ingredient else None,
+            'quantity_required': self.quantity_required,
+            'unit': self.ingredient.unit if self.ingredient else ''
+        }
+
+    def __repr__(self):
+        return f"<MenuItemIngredient Recipe #{self.recipe_id} Item:{self.item_id} -> Ingr:{self.ingredient_id} ({self.quantity_required})>"
+
+
+class DailyFoodPrep(db.Model):
+    """
+    DailyFoodPrep Model:
+    Tracks batch cooking vs. actual sales to detect overproduction and food waste risks.
+    """
+    __tablename__ = 'daily_food_prep'
+
+    prep_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    prep_date = db.Column(db.String(20), nullable=False) # 'YYYY-MM-DD'
+    item_id = db.Column(db.Integer, db.ForeignKey('product_menu.id', ondelete='CASCADE'), nullable=False)
+    quantity_prepared = db.Column(db.Integer, nullable=False)
+    quantity_sold = db.Column(db.Integer, default=0)
+
+    # Relationships
+    product = db.relationship('ProductMenu', backref='prep_records')
+
+    @property
+    def quantity_surplus(self) -> int:
+        return max(0, self.quantity_prepared - (self.quantity_sold or 0))
+
+    @property
+    def waste_risk_percentage(self) -> float:
+        if self.quantity_prepared > 0:
+            return round((self.quantity_surplus / self.quantity_prepared) * 100.0, 1)
+        return 0.0
+
+    def to_dict(self):
+        return {
+            'prep_id': self.prep_id,
+            'prep_date': self.prep_date,
+            'item_id': self.item_id,
+            'item_name': self.product.item_name if self.product else None,
+            'category': self.product.category if self.product else None,
+            'quantity_prepared': self.quantity_prepared,
+            'quantity_sold': self.quantity_sold,
+            'quantity_surplus': self.quantity_surplus,
+            'waste_risk_percentage': self.waste_risk_percentage
+        }
+
+    def __repr__(self):
+        return f"<DailyFoodPrep #{self.prep_id} Date:{self.prep_date} Item:{self.item_id} Prep:{self.quantity_prepared} Sold:{self.quantity_sold}>"
+
+
+class FoodWasteLog(db.Model):
+    """
+    FoodWasteLog Model:
+    Core tracking table for food waste causes, volumes, and cost losses.
+    """
+    __tablename__ = 'food_waste_logs'
+
+    waste_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    log_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    item_type = db.Column(db.String(50), nullable=False) # 'Prepared Food', 'Raw Ingredient'
+    item_name = db.Column(db.String(100), nullable=False)
+    quantity_wasted = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False) # 'portions', 'pieces', 'plates', 'kg', 'liters'
+    waste_reason = db.Column(db.String(100), nullable=False) # 'Expired / Spoiled', 'Overproduction / Unsold', 'Kitchen Error / Burnt', etc.
+    cost_loss = db.Column(db.Float, nullable=False)
+    recorded_by = db.Column(db.String(50), default='Kitchen Supervisor')
+    disposal_method = db.Column(db.String(50), default='Landfill') # 'Landfill', 'Composted', 'Animal Feed', 'Donation'
+
+    def to_dict(self):
+        return {
+            'waste_id': self.waste_id,
+            'log_date': self.log_date.strftime('%Y-%m-%d %H:%M') if self.log_date else None,
+            'item_type': self.item_type,
+            'item_name': self.item_name,
+            'quantity_wasted': self.quantity_wasted,
+            'unit': self.unit,
+            'waste_reason': self.waste_reason,
+            'cost_loss': self.cost_loss,
+            'recorded_by': self.recorded_by,
+            'disposal_method': self.disposal_method
+        }
+
+    def __repr__(self):
+        return f"<FoodWasteLog #{self.waste_id} {self.item_name} ({self.quantity_wasted} {self.unit}) Reason:{self.waste_reason}>"
+
+
+class FoodDonation(db.Model):
+    """
+    FoodDonation Model:
+    Tracks surplus food diverted to food banks and charities instead of landfill.
+    """
+    __tablename__ = 'food_donations'
+
+    donation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    donation_date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    recipient_organization = db.Column(db.String(100), nullable=False)
+    food_description = db.Column(db.String(150), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(20), nullable=False) # 'packets', 'portions', 'kg'
+    driver_or_contact = db.Column(db.String(50), nullable=True)
+    donation_status = db.Column(db.String(30), default='Delivered') # 'Scheduled', 'Picked Up', 'Delivered'
+
+    def to_dict(self):
+        return {
+            'donation_id': self.donation_id,
+            'donation_date': self.donation_date.strftime('%Y-%m-%d %H:%M') if self.donation_date else None,
+            'recipient_organization': self.recipient_organization,
+            'food_description': self.food_description,
+            'quantity': self.quantity,
+            'unit': self.unit,
+            'driver_or_contact': self.driver_or_contact,
+            'donation_status': self.donation_status
+        }
+
+    def __repr__(self):
+        return f"<FoodDonation #{self.donation_id} To:{self.recipient_organization} ({self.quantity} {self.unit}) Status:{self.donation_status}>"
+
 

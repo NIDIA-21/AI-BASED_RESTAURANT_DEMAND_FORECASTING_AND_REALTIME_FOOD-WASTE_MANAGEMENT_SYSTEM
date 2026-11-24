@@ -86,14 +86,15 @@ def create_app(config_class=Config):
             # Create tables if not existing
             db.create_all()
 
-            # Check if seed data exists
-            if ProductMenu.query.count() == 0:
-                print("[STARTUP] No menu items found. Running synthetic data seeding...")
+            # Check if seed data exists and matches the exact 10 menu items
+            if ProductMenu.query.count() != 10:
+                print("[STARTUP] Synchronizing database with 10 Indian Menu Items & Food Waste schema...")
                 from database.seed_data import seed_all_data
-                seed_all_data(days_of_history=180)
-
-            # Check if ML model is trained
-            if not Config.MODEL_FILE_PATH.exists():
+                seed_all_data(days_of_history=180, force=True)
+                # Retrain ML model for the 10 items
+                from ml_model.train import train_demand_forecasting_model
+                train_demand_forecasting_model()
+            elif not Config.MODEL_FILE_PATH.exists():
                 print("[STARTUP] ML model artifact not found. Triggering initial model training...")
                 from ml_model.train import train_demand_forecasting_model
                 train_demand_forecasting_model()

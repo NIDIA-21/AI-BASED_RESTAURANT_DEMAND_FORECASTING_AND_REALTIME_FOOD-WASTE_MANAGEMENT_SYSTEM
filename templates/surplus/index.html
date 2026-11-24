@@ -245,5 +245,115 @@
         </div>
     </div>
 
+    <!-- Food Waste Logs by Cause & Financial Loss -->
+    {% if waste_logs %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-trash-can mr-2 text-rose-500"></i>
+                    Kitchen Food Waste Incident Logs
+                </h3>
+                <p class="text-xs text-slate-500">Tracking waste causes, volume, financial losses, and disposal methods</p>
+            </div>
+            <span class="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1 rounded-full">
+                Total Financial Loss: {{ total_waste_loss|currency }}
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Log Date</th>
+                        <th class="px-5 py-3.5">Item Name</th>
+                        <th class="px-4 py-3.5">Type</th>
+                        <th class="px-4 py-3.5 text-center">Quantity Wasted</th>
+                        <th class="px-4 py-3.5">Reason / Cause</th>
+                        <th class="px-4 py-3.5 text-right">Cost Loss</th>
+                        <th class="px-4 py-3.5">Disposal Method</th>
+                        <th class="px-4 py-3.5">Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for w in waste_logs %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5 text-slate-500 font-mono text-[11px]">{{ w.log_date.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                        <td class="px-5 py-3.5 font-bold text-slate-900">{{ w.item_name }}</td>
+                        <td class="px-4 py-3.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold {% if w.item_type == 'Prepared Food' %}bg-amber-100 text-amber-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ w.item_type }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-bold text-slate-800">{{ w.quantity_wasted }} {{ w.unit }}</td>
+                        <td class="px-4 py-3.5 text-slate-700 font-medium">{{ w.waste_reason }}</td>
+                        <td class="px-4 py-3.5 text-right font-bold text-rose-600">{{ w.cost_loss|currency }}</td>
+                        <td class="px-4 py-3.5">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold 
+                                {% if w.disposal_method == 'Composted' %}bg-emerald-100 text-emerald-800
+                                {% elif w.disposal_method == 'Animal Feed' %}bg-amber-100 text-amber-800
+                                {% elif w.disposal_method == 'Donation' %}bg-blue-100 text-blue-800
+                                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                {{ w.disposal_method }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-500 text-[11px]">{{ w.recorded_by }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Community Food Donations Table -->
+    {% if community_donations %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-hand-holding-heart mr-2 text-emerald-600"></i>
+                    Community Food Drives & Donations
+                </h3>
+                <p class="text-xs text-slate-500">Diverting surplus to local food banks, orphanages, and community shelters</p>
+            </div>
+            <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                {{ community_donations|length }} Donations Delivered
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                    <tr>
+                        <th class="px-5 py-3.5">Date</th>
+                        <th class="px-5 py-3.5">Recipient Organization</th>
+                        <th class="px-5 py-3.5">Food Description</th>
+                        <th class="px-4 py-3.5 text-center">Quantity</th>
+                        <th class="px-4 py-3.5">Volunteer / Contact</th>
+                        <th class="px-4 py-3.5 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for don in community_donations %}
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="px-5 py-3.5 text-slate-500 font-mono text-[11px]">{{ don.donation_date.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                        <td class="px-5 py-3.5 font-bold text-slate-900">{{ don.recipient_organization }}</td>
+                        <td class="px-5 py-3.5 text-slate-700">{{ don.food_description }}</td>
+                        <td class="px-4 py-3.5 text-center font-bold text-emerald-700">{{ don.quantity }} {{ don.unit }}</td>
+                        <td class="px-4 py-3.5 text-slate-600">{{ don.driver_or_contact or 'Volunteer Pickup' }}</td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                {{ don.donation_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
