@@ -119,9 +119,21 @@ def login():
             # 1. Standard hash validation
             if user.check_password(password):
                 authenticated = True
-            # 2. Known demo credentials fallback (manager/manager, admin/admin, etc.)
-            elif input_clean in demo_role_map and password in (input_clean, f"{input_clean}123", "password123", "admin", "manager", "staff", "customer"):
-                user.set_password(password)
+            # 2. Case-insensitive fallback for demo credentials (manager/manager, admin/admin, etc.)
+            elif (input_clean in demo_role_map or user.username.lower() in demo_role_map) and (
+                password.lower() in (
+                    input_clean,
+                    user.username.lower(),
+                    f"{input_clean}123",
+                    "password123",
+                    "password",
+                    "admin",
+                    "manager",
+                    "staff",
+                    "customer"
+                )
+            ):
+                user.set_password(password.lower())
                 db.session.commit()
                 authenticated = True
 
