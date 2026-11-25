@@ -2,6 +2,9 @@
 Restaurant Management & Food Waste Tracking
 Zero-Password Database Setup Script (SQLite & MySQL compatible)
 
+Generates a realistic 3-month (90-day) operational database spanning
+2026-08-27 to 2026-11-24 based on the 10-item restaurant schema.
+
 Run this script on ANY computer with:
     python setup_database.py
 
@@ -9,12 +12,20 @@ It requires NO root passwords, NO MySQL server, and works out-of-the-box
 with Python's built-in sqlite3!
 """
 
-import sqlite3
 import os
+import random
+import sqlite3
+from datetime import date, datetime, timedelta
 
 DB_NAME = "restaurant_waste.db"
+DAYS_OF_HISTORY = 90  # ~3 months
+END_DATE = date(2026, 11, 24)
+START_DATE = END_DATE - timedelta(days=DAYS_OF_HISTORY - 1)
+
 
 def init_db():
+    random.seed(42)
+
     if os.path.exists(DB_NAME):
         os.remove(DB_NAME)
         print(f"Removed existing {DB_NAME} to ensure a fresh start.")
@@ -130,10 +141,7 @@ def init_db():
     """)
 
     # INSERT 10 INDIAN MENU ITEMS
-    cursor.executemany("""
-    INSERT INTO menu_items (item_id, item_name, category, price, cost_price, shelf_life_days, is_available)
-    VALUES (?, ?, ?, ?, ?, ?, ?);
-    """, [
+    menu_items_data = [
         (1, 'Masala Dosa', 'Breakfast / Tiffin', 60.00, 20.00, 1, 1),
         (2, 'Idli', 'Breakfast / Tiffin', 40.00, 12.00, 1, 1),
         (3, 'Poori', 'Breakfast / Tiffin', 50.00, 15.00, 1, 1),
@@ -144,13 +152,19 @@ def init_db():
         (8, 'Coffee', 'Beverages', 25.00, 8.00, 1, 1),
         (9, 'Tea', 'Beverages', 20.00, 6.00, 1, 1),
         (10, 'Chapati and Curry', 'Dinner', 70.00, 25.00, 1, 1)
-    ])
+    ]
+    cursor.executemany("""
+    INSERT INTO menu_items (item_id, item_name, category, price, cost_price, shelf_life_days, is_available)
+    VALUES (?, ?, ?, ?, ?, ?, ?);
+    """, menu_items_data)
+
+    menu_lookup = {
+        row[0]: {'name': row[1], 'category': row[2], 'price': row[3], 'cost': row[4]}
+        for row in menu_items_data
+    }
 
     # INSERT RAW INGREDIENTS
-    cursor.executemany("""
-    INSERT INTO inventory_ingredients (ingredient_id, ingredient_name, category, quantity_in_stock, unit, cost_per_unit, reorder_level, expiry_date, storage_location)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-    """, [
+    ingredients_data = [
         (1, 'Rice & Urad Dal Batter', 'Prepared Batter', 25.0, 'kg', 35.00, 8.0, '2026-11-26', 'Refrigerator'),
         (2, 'Potatoes', 'Produce', 40.0, 'kg', 25.00, 10.0, '2026-12-10', 'Dry Pantry'),
         (3, 'Wheat Flour (Atta)', 'Dry Goods', 50.0, 'kg', 38.00, 15.0, '2027-02-15', 'Dry Storage'),
@@ -161,7 +175,11 @@ def init_db():
         (8, 'Coffee Powder & Tea Leaves', 'Dry Goods', 10.0, 'kg', 400.00, 3.0, '2027-04-10', 'Pantry Shelf'),
         (9, 'Cooking Oil', 'Dry Goods', 40.0, 'liters', 130.00, 12.0, '2027-06-30', 'Storage Room'),
         (10, 'Mixed Vegetables (Carrot, Beans, Peas)', 'Produce', 25.0, 'kg', 45.00, 8.0, '2026-11-26', 'Cold Storage')
-    ])
+    ]
+    cursor.executemany("""
+    INSERT INTO inventory_ingredients (ingredient_id, ingredient_name, category, quantity_in_stock, unit, cost_per_unit, reorder_level, expiry_date, storage_location)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    """, ingredients_data)
 
     # INSERT RECIPE MAPPING
     cursor.executemany("""
@@ -180,66 +198,146 @@ def init_db():
         (10, 3, 0.18), (10, 10, 0.15)
     ])
 
-    # INSERT ORDERS
+    # GENERATE 3 MONTHS (90 DAYS) OF ORDERS, ORDER ITEMS, DAILY PREP, WASTE LOGS & DONATIONS
+    meal_slot_items = {
+        'breakfast': ([1, 2, 3, 8, 9], range(8, 11)),
+        'lunch': ([4, 5, 8, 9], range(12, 15)),
+        'snacks': ([6, 7, 8, 9], range(16, 19)),
+        'dinner': ([5, 10, 1, 8, 9], range(19, 22))
+    }
+
+    orders_rows = []
+    order_items_rows = []
+    prep_rows = []
+    waste_rows = []
+    donation_rows = []
+
+    order_id_seq = 1
+    staff_members = ['Head Chef Ramesh', 'Cook Suresh', 'Tiffin Master Anand', 'Kitchen Busser', 'Storekeeper Priya']
+    prepared_reasons = [
+        ('Overproduction / Unsold', ['Composted', 'Animal Feed', 'Donation']),
+        ('Kitchen Error / Burnt', ['Landfill', 'Composted']),
+        ('Plate Waste (Leftover by customer)', ['Composted', 'Animal Feed']),
+        ('Handling / Dropped', ['Landfill', 'Composted'])
+    ]
+    ngo_partners = [
+        ('Robin Hood Army Food Drive', 'Vikram Volunteer'),
+        ('Sneha Orphanage & Care Home', 'Kavita Coordinator'),
+        ('Feeding India - Mangalore Chapter', 'Arjun Rao'),
+        ('Karuna Shelter Home', 'Meera Nair')
+    ]
+    donation_descriptions = [
+        'Untouched surplus Chapatis and Vegetable Curry',
+        'Freshly packed Idlis and Samosas',
+        'Surplus Veg Meals and Steamed Rice',
+        'Packed Masala Dosa & Paneer Rice portions',
+        'Evening batch Samosas and Veg Sandwiches'
+    ]
+
+    popularity_weights = {
+        1: 0.38, 2: 0.35, 3: 0.30, 4: 0.42, 5: 0.32,
+        6: 0.45, 7: 0.28, 8: 0.40, 9: 0.48, 10: 0.34
+    }
+
+    for day_offset in range(DAYS_OF_HISTORY):
+        current_date = START_DATE + timedelta(days=day_offset)
+        date_str = current_date.strftime('%Y-%m-%d')
+        is_weekend = current_date.weekday() in (4, 5, 6)
+
+        # Orders per day (higher on weekends)
+        num_orders = random.randint(14, 22) if is_weekend else random.randint(9, 15)
+        daily_sold_counts = {item_id: 0 for item_id in menu_lookup}
+
+        for _ in range(num_orders):
+            slot = random.choice(['breakfast', 'lunch', 'snacks', 'dinner'])
+            candidate_items, hour_range = meal_slot_items[slot]
+            order_hour = random.choice(list(hour_range))
+            order_minute = random.choice([0, 10, 15, 25, 30, 40, 45, 50])
+            order_dt = f"{date_str} {order_hour:02d}:{order_minute:02d}:00"
+
+            order_type = random.choices(['Dine-In', 'Takeaway', 'Online Delivery'], weights=[0.65, 0.20, 0.15], k=1)[0]
+            table_num = random.randint(1, 12) if order_type == 'Dine-In' else None
+
+            chosen_items = random.sample(candidate_items, k=random.randint(1, min(3, len(candidate_items))))
+            total_amt = 0.0
+            for item_id in chosen_items:
+                qty = random.randint(1, 3)
+                subtotal = round(qty * menu_lookup[item_id]['price'], 2)
+                total_amt += subtotal
+                daily_sold_counts[item_id] += qty
+                order_items_rows.append((order_id_seq, item_id, qty, subtotal))
+
+            orders_rows.append((order_dt, table_num, order_type, round(total_amt, 2), 'Completed'))
+            order_id_seq += 1
+
+        # Daily food prep (tracked for 4-6 items per day, aligned with realistic volume)
+        tracked_items = random.sample(list(menu_lookup.keys()), k=random.randint(4, 6))
+        for item_id in tracked_items:
+            base_sold = max(daily_sold_counts[item_id], int(round(random.gauss(50 * popularity_weights[item_id] * (2.6 if is_weekend else 2.0), 7))))
+            surplus = random.randint(2, 12) if random.random() < 0.80 else 0
+            prepared = base_sold + surplus
+            prep_rows.append((date_str, item_id, prepared, base_sold))
+
+        # Food waste logs (1-3 incidents per day)
+        num_waste = random.choices([1, 2, 3], weights=[0.40, 0.45, 0.15], k=1)[0]
+        for _ in range(num_waste):
+            hour = random.randint(13, 21)
+            minute = random.choice([0, 15, 30, 45])
+            log_dt = f"{date_str} {hour:02d}:{minute:02d}:00"
+            if random.random() < 0.80:
+                item_id = random.choice(list(menu_lookup.keys()))
+                item_info = menu_lookup[item_id]
+                qty = float(random.randint(2, 9))
+                reason, disposals = random.choice(prepared_reasons)
+                cost_loss = round(qty * item_info['cost'], 2)
+                unit = 'pieces' if item_info['name'] == 'Samosa' else ('plates' if 'Dosa' in item_info['name'] else 'portions')
+                waste_rows.append((
+                    log_dt, 'Prepared Food', item_info['name'], qty, unit,
+                    reason, cost_loss, random.choice(staff_members), random.choice(disposals)
+                ))
+            else:
+                ingr = random.choice(ingredients_data)
+                qty = round(random.uniform(1.0, 4.0), 1)
+                cost_loss = round(qty * ingr[5], 2)
+                waste_rows.append((
+                    log_dt, 'Raw Ingredient', ingr[1], qty, ingr[4],
+                    'Expired / Spoiled', cost_loss, 'Storekeeper Priya', random.choice(['Landfill', 'Composted'])
+                ))
+
+        # Community food donations every 2 days
+        if day_offset % 2 == 0:
+            org, contact = random.choice(ngo_partners)
+            don_dt = f"{date_str} {random.randint(21, 22):02d}:{random.choice([0, 30]):02d}:00"
+            donation_rows.append((
+                don_dt, org, random.choice(donation_descriptions),
+                float(random.randint(10, 30)), random.choice(['packets', 'portions']),
+                contact, 'Delivered'
+            ))
+
     cursor.executemany("""
     INSERT INTO orders (order_date, table_number, order_type, total_amount, order_status)
     VALUES (?, ?, ?, ?, ?);
-    """, [
-        ('2026-11-24 08:30:00', 3, 'Dine-In', 125.00, 'Completed'),
-        ('2026-11-24 09:15:00', 5, 'Dine-In', 85.00, 'Completed'),
-        ('2026-11-24 13:00:00', 2, 'Dine-In', 250.00, 'Completed'),
-        ('2026-11-24 17:30:00', None, 'Takeaway', 70.00, 'Completed')
-    ])
+    """, orders_rows)
 
-    # INSERT ORDER ITEMS
     cursor.executemany("""
     INSERT INTO order_items (order_id, item_id, quantity, subtotal)
     VALUES (?, ?, ?, ?);
-    """, [
-        (1, 1, 1, 60.00),
-        (1, 2, 1, 40.00),
-        (1, 8, 1, 25.00),
-        (2, 3, 1, 50.00),
-        (2, 8, 1, 25.00),
-        (3, 4, 2, 240.00),
-        (4, 6, 2, 50.00),
-        (4, 9, 1, 20.00)
-    ])
+    """, order_items_rows)
 
-    # INSERT DAILY FOOD PREP
     cursor.executemany("""
     INSERT INTO daily_food_prep (prep_date, item_id, quantity_prepared, quantity_sold)
     VALUES (?, ?, ?, ?);
-    """, [
-        ('2026-11-23', 2, 50, 42),
-        ('2026-11-23', 4, 40, 31),
-        ('2026-11-23', 6, 60, 48),
-        ('2026-11-24', 1, 45, 43),
-        ('2026-11-24', 4, 35, 30),
-        ('2026-11-24', 10, 40, 34)
-    ])
+    """, prep_rows)
 
-    # INSERT FOOD WASTE LOGS
     cursor.executemany("""
     INSERT INTO food_waste_logs (log_date, item_type, item_name, quantity_wasted, unit, waste_reason, cost_loss, recorded_by, disposal_method)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
-    """, [
-        ('2026-11-23 15:30:00', 'Prepared Food', 'Veg Meals', 6.0, 'portions', 'Overproduction / Unsold', 270.00, 'Head Chef Ramesh', 'Composted'),
-        ('2026-11-23 18:00:00', 'Prepared Food', 'Samosa', 8.0, 'pieces', 'Overproduction / Unsold', 64.00, 'Cook Suresh', 'Animal Feed'),
-        ('2026-11-23 20:30:00', 'Prepared Food', 'Masala Dosa', 3.0, 'plates', 'Kitchen Error / Burnt', 60.00, 'Tiffin Master Anand', 'Landfill'),
-        ('2026-11-24 14:15:00', 'Prepared Food', 'Veg Meals (Leftover Rice)', 2.5, 'kg', 'Plate Waste (Leftover by customer)', 90.00, 'Kitchen Busser', 'Composted'),
-        ('2026-11-24 16:00:00', 'Raw Ingredient', 'Fresh Milk', 3.0, 'liters', 'Expired / Spoiled', 165.00, 'Storekeeper Priya', 'Landfill'),
-        ('2026-11-24 21:30:00', 'Prepared Food', 'Chapati and Curry', 5.0, 'portions', 'Overproduction / Unsold', 125.00, 'Head Chef Ramesh', 'Donation')
-    ])
+    """, waste_rows)
 
-    # INSERT FOOD DONATIONS
     cursor.executemany("""
     INSERT INTO food_donations (donation_date, recipient_organization, food_description, quantity, unit, driver_or_contact, donation_status)
     VALUES (?, ?, ?, ?, ?, ?, ?);
-    """, [
-        ('2026-11-23 22:30:00', 'Robin Hood Army Food Drive', 'Untouched surplus Chapatis and Vegetable Curry', 15.0, 'packets', 'Vikram Volunteer', 'Delivered'),
-        ('2026-11-24 22:00:00', 'Sneha Orphanage & Care Home', 'Freshly packed Idlis and Samosas', 20.0, 'portions', 'Kavita Coordinator', 'Delivered')
-    ])
+    """, donation_rows)
 
     # CREATE ANALYTICAL VIEWS
     cursor.execute("""
@@ -270,9 +368,41 @@ def init_db():
     ORDER BY p.prep_date DESC, quantity_surplus DESC;
     """)
 
+    cursor.execute("""
+    CREATE VIEW IF NOT EXISTS vw_expiring_soon_alert AS
+    SELECT
+        ingredient_id,
+        ingredient_name,
+        category,
+        quantity_in_stock,
+        unit,
+        expiry_date,
+        CAST(julianday(expiry_date) - julianday('2026-11-24') AS INTEGER) AS days_until_expiry,
+        storage_location
+    FROM inventory_ingredients
+    WHERE julianday(expiry_date) <= julianday('2026-11-24', '+5 days')
+    ORDER BY days_until_expiry ASC;
+    """)
+
+    cursor.execute("""
+    CREATE VIEW IF NOT EXISTS vw_environmental_impact AS
+    SELECT
+        disposal_method,
+        COUNT(*) AS incident_count,
+        ROUND(SUM(quantity_wasted), 2) AS total_quantity,
+        ROUND(SUM(cost_loss), 2) AS total_cost_value
+    FROM food_waste_logs
+    GROUP BY disposal_method;
+    """)
+
     conn.commit()
     conn.close()
-    print("SUCCESS! 'restaurant_waste.db' created successfully with all 10 items and zero passwords!")
+    print(
+        f"SUCCESS! '{DB_NAME}' created with {DAYS_OF_HISTORY} days ({START_DATE} to {END_DATE}) "
+        f"| Orders: {len(orders_rows)} | OrderItems: {len(order_items_rows)} "
+        f"| DailyPrep: {len(prep_rows)} | WasteLogs: {len(waste_rows)} | Donations: {len(donation_rows)}"
+    )
+
 
 if __name__ == "__main__":
     init_db()

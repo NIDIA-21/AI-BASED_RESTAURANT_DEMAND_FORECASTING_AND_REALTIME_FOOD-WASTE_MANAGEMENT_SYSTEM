@@ -21,7 +21,7 @@ The platform integrates **scikit-learn Machine Learning regression models**, **r
 ```
 +-----------------------------------------------------------------------------------+
 | LAYER 1: DATA SOURCES & SYNTHETIC ML SEEDING                                      |
-| • 180+ Days of Time-Series Sales Data (3,200+ Observations)                       |
+| • 90 Days (~3 Months) of Time-Series Sales Data (900 Observations)                 |
 | • Multidimensional Context: Weekday, Weekend, Festival, Office Party, Birthday    |
 | • Meteorological Variance: Sunny, Rainy, Cloudy, Stormy, Cold                     |
 +-----------------------------------------------------------------------------------+
@@ -74,8 +74,8 @@ The system models relational data with full referential integrity and cascading 
 
 ### 2. Synthetic Data Seeding Script
 Located in [`database/seed_data.py`](file:///c:/Users/nixon/AI-Restaurant-Demand-Forecasting/database/seed_data.py), this automated generator generates:
-- 18 diverse food items across Starters, Main Courses, Desserts, Beverages, and Party Platters.
-- 180 days of realistic daily sales history (3,240+ observation points).
+- 10 Indian menu items across Breakfast / Tiffin, Lunch, Lunch / Dinner, Snacks, and Beverages.
+- 90 days (~3 months) of realistic daily sales history (900 observation points).
 - Event-specific affinity multipliers (e.g. Platters spike 3.4x during office parties, Cakes spike 3.4x during birthday bookings, Biryani surges 2.4x during festivals).
 - Weather modifiers (e.g. Masala Chai surges 2.4x during rainstorms, cold brews surge 1.7x on sunny afternoons).
 - Default demo accounts and active inventory stocks.
@@ -125,7 +125,7 @@ pip install -r requirements.txt
 The application supports **MySQL** by default with an **automatic SQLite fallback** (`restaurant.db`) for immediate zero-config testing.
 
 #### Option A: Running with local SQLite (Default / Out of the Box)
-Simply run the application. The system will automatically create tables, seed 180 days of synthetic sales data, and train the ML model on initial boot:
+Simply run the application. The system will automatically create tables, seed 90 days (~3 months) of synthetic sales data, and train the ML model on initial boot:
 ```bash
 python app.py
 ```

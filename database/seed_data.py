@@ -194,7 +194,7 @@ DEFAULT_USERS = [
 ]
 
 
-def seed_all_data(days_of_history: int = 180, force: bool = False):
+def seed_all_data(days_of_history: int = 90, force: bool = False):
     """
     Automated seed script generating rich historical records and context data for the 10 menu items.
     """
@@ -292,7 +292,7 @@ def seed_all_data(days_of_history: int = 180, force: bool = False):
         db.session.add(recipe_entry)
     db.session.commit()
 
-    # 5. Seed Historical Sales Data (180 days for all 10 items)
+    # 5. Seed Historical Sales Data (90 days / 3 months for all 10 items)
     print(f"[SEED] Generating {days_of_history} days of historical sales records for 10 menu items...")
     today = date.today()
     start_date = today - timedelta(days=days_of_history)
@@ -302,7 +302,7 @@ def seed_all_data(days_of_history: int = 180, force: bool = False):
 
     historical_records = []
     total_sales_points = 0
-    festival_offsets = {5, 6, 25, 26, 60, 61, 105, 120, 150}
+    festival_offsets = {5, 6, 25, 26, 45, 60, 75}
 
     for d in range(days_of_history):
         current_date = start_date + timedelta(days=d)
@@ -370,69 +370,111 @@ def seed_all_data(days_of_history: int = 180, force: bool = False):
 
     print(f"[SEED] Successfully generated {total_sales_points} historical sales data points!")
 
-    # 6. Seed Daily Food Prep Records
-    print("[SEED] Creating daily food prep records...")
-    prep_data = [
-        ('2026-11-23', 2, 50, 42),  # Idli
-        ('2026-11-23', 4, 40, 31),  # Veg Meals
-        ('2026-11-23', 6, 60, 48),  # Samosa
-        ('2026-11-24', 1, 45, 43),  # Masala Dosa
-        ('2026-11-24', 4, 35, 30),  # Veg Meals
-        ('2026-11-24', 10, 40, 34)  # Chapati & Curry
-    ]
-    for p in prep_data:
-        daily_p = DailyFoodPrep(
-            prep_date=p[0],
-            item_id=p[1],
-            quantity_prepared=p[2],
-            quantity_sold=p[3]
-        )
-        db.session.add(daily_p)
+    # 6. Seed Daily Food Prep Records (3 months / days_of_history)
+    print(f"[SEED] Creating {days_of_history} days of daily food prep records...")
+    prep_records = []
+    for d in range(days_of_history):
+        current_date = start_date + timedelta(days=d)
+        date_str = current_date.strftime('%Y-%m-%d')
+        daily_items = random.sample(menu_objects, k=random.randint(4, 6))
+        for item, item_meta in daily_items:
+            sold = max(12, int(round(random.gauss(50 * item_meta['popularity_weight'] * 2.2, 8))))
+            surplus = random.randint(2, 12) if random.random() < 0.80 else 0
+            prepared = sold + surplus
+            prep_records.append(DailyFoodPrep(
+                prep_date=date_str,
+                item_id=item.id,
+                quantity_prepared=prepared,
+                quantity_sold=sold
+            ))
+    db.session.bulk_save_objects(prep_records)
     db.session.commit()
+    print(f"[SEED] Created {len(prep_records)} daily food prep records!")
 
-    # 7. Seed Food Waste Logs
-    print("[SEED] Creating food waste logs...")
-    waste_logs = [
-        (datetime(2026, 11, 23, 15, 30), 'Prepared Food', 'Veg Meals', 6.0, 'portions', 'Overproduction / Unsold', 270.00, 'Head Chef Ramesh', 'Composted'),
-        (datetime(2026, 11, 23, 18, 0), 'Prepared Food', 'Samosa', 8.0, 'pieces', 'Overproduction / Unsold', 64.00, 'Cook Suresh', 'Animal Feed'),
-        (datetime(2026, 11, 23, 20, 30), 'Prepared Food', 'Masala Dosa', 3.0, 'plates', 'Kitchen Error / Burnt', 60.00, 'Tiffin Master Anand', 'Landfill'),
-        (datetime(2026, 11, 24, 14, 15), 'Prepared Food', 'Veg Meals (Leftover Rice)', 2.5, 'kg', 'Plate Waste (Leftover by customer)', 90.00, 'Kitchen Busser', 'Composted'),
-        (datetime(2026, 11, 24, 16, 0), 'Raw Ingredient', 'Fresh Milk', 3.0, 'liters', 'Expired / Spoiled', 165.00, 'Storekeeper Priya', 'Landfill'),
-        (datetime(2026, 11, 24, 21, 30), 'Prepared Food', 'Chapati and Curry', 5.0, 'portions', 'Overproduction / Unsold', 125.00, 'Head Chef Ramesh', 'Donation')
+    # 7. Seed Food Waste Logs (3 months / days_of_history)
+    print(f"[SEED] Creating {days_of_history} days of food waste logs...")
+    waste_logs = []
+    staff_members = ['Head Chef Ramesh', 'Cook Suresh', 'Tiffin Master Anand', 'Kitchen Busser', 'Storekeeper Priya']
+    prepared_reasons = [
+        ('Overproduction / Unsold', ['Composted', 'Animal Feed', 'Donation']),
+        ('Kitchen Error / Burnt', ['Landfill', 'Composted']),
+        ('Plate Waste (Leftover by customer)', ['Composted', 'Animal Feed']),
+        ('Handling / Dropped', ['Landfill', 'Composted'])
     ]
-    for w in waste_logs:
-        waste_entry = FoodWasteLog(
-            log_date=w[0],
-            item_type=w[1],
-            item_name=w[2],
-            quantity_wasted=w[3],
-            unit=w[4],
-            waste_reason=w[5],
-            cost_loss=w[6],
-            recorded_by=w[7],
-            disposal_method=w[8]
-        )
-        db.session.add(waste_entry)
+    for d in range(days_of_history):
+        current_date = start_date + timedelta(days=d)
+        num_incidents = random.choices([1, 2, 3], weights=[0.4, 0.45, 0.15], k=1)[0]
+        for _ in range(num_incidents):
+            hour = random.randint(13, 21)
+            minute = random.choice([0, 15, 30, 45])
+            log_dt = datetime(current_date.year, current_date.month, current_date.day, hour, minute)
+            if random.random() < 0.80:
+                _, item_meta = random.choice(menu_objects)
+                qty = float(random.randint(2, 9))
+                reason, disposals = random.choice(prepared_reasons)
+                cost_loss = round(qty * item_meta['standard_prep_cost'], 2)
+                unit = 'pieces' if item_meta['item_name'] == 'Samosa' else ('plates' if 'Dosa' in item_meta['item_name'] else 'portions')
+                waste_logs.append(FoodWasteLog(
+                    log_date=log_dt,
+                    item_type='Prepared Food',
+                    item_name=item_meta['item_name'],
+                    quantity_wasted=qty,
+                    unit=unit,
+                    waste_reason=reason,
+                    cost_loss=cost_loss,
+                    recorded_by=random.choice(staff_members),
+                    disposal_method=random.choice(disposals)
+                ))
+            else:
+                ingr = random.choice(RAW_INGREDIENTS)
+                qty = round(random.uniform(1.0, 4.0), 1)
+                cost_loss = round(qty * ingr[5], 2)
+                waste_logs.append(FoodWasteLog(
+                    log_date=log_dt,
+                    item_type='Raw Ingredient',
+                    item_name=ingr[1],
+                    quantity_wasted=qty,
+                    unit=ingr[4],
+                    waste_reason='Expired / Spoiled',
+                    cost_loss=cost_loss,
+                    recorded_by='Storekeeper Priya',
+                    disposal_method=random.choice(['Landfill', 'Composted'])
+                ))
+    db.session.bulk_save_objects(waste_logs)
     db.session.commit()
+    print(f"[SEED] Created {len(waste_logs)} food waste logs!")
 
-    # 8. Seed Food Donations
-    print("[SEED] Creating community food donation logs...")
-    donations = [
-        (datetime(2026, 11, 23, 22, 30), 'Robin Hood Army Food Drive', 'Untouched surplus Chapatis and Vegetable Curry', 15.0, 'packets', 'Vikram Volunteer', 'Delivered'),
-        (datetime(2026, 11, 24, 22, 0), 'Sneha Orphanage & Care Home', 'Freshly packed Idlis and Samosas', 20.0, 'portions', 'Kavita Coordinator', 'Delivered')
+    # 8. Seed Food Donations (3 months / days_of_history)
+    print(f"[SEED] Creating {days_of_history} days of community food donation logs...")
+    ngo_partners = [
+        ('Robin Hood Army Food Drive', 'Vikram Volunteer'),
+        ('Sneha Orphanage & Care Home', 'Kavita Coordinator'),
+        ('Feeding India - Mangalore Chapter', 'Arjun Rao'),
+        ('Karuna Shelter Home', 'Meera Nair')
     ]
-    for don in donations:
-        donation_entry = FoodDonation(
-            donation_date=don[0],
-            recipient_organization=don[1],
-            food_description=don[2],
-            quantity=don[3],
-            unit=don[4],
-            driver_or_contact=don[5],
-            donation_status=don[6]
-        )
-        db.session.add(donation_entry)
+    donation_descriptions = [
+        'Untouched surplus Chapatis and Vegetable Curry',
+        'Freshly packed Idlis and Samosas',
+        'Surplus Veg Meals and Steamed Rice',
+        'Packed Masala Dosa batter & Paneer Rice portions',
+        'Evening batch Samosas and Veg Sandwiches'
+    ]
+    donations = []
+    for d in range(0, days_of_history, 2):
+        current_date = start_date + timedelta(days=d)
+        org, contact = random.choice(ngo_partners)
+        donations.append(FoodDonation(
+            donation_date=datetime(current_date.year, current_date.month, current_date.day, random.randint(21, 22), random.choice([0, 30])),
+            recipient_organization=org,
+            food_description=random.choice(donation_descriptions),
+            quantity=float(random.randint(10, 30)),
+            unit=random.choice(['packets', 'portions']),
+            driver_or_contact=contact,
+            donation_status='Delivered'
+        ))
+    db.session.bulk_save_objects(donations)
     db.session.commit()
+    print(f"[SEED] Created {len(donations)} community food donation records!")
 
     # 9. Seed Active Live Orders for Today
     print("[SEED] Creating initial live orders for the current service shift...")

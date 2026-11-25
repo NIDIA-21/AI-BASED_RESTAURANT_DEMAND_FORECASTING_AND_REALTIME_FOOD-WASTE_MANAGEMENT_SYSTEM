@@ -90,7 +90,7 @@ def create_app(config_class=Config):
             if ProductMenu.query.count() != 10:
                 print("[STARTUP] Synchronizing database with 10 Indian Menu Items & Food Waste schema...")
                 from database.seed_data import seed_all_data
-                seed_all_data(days_of_history=180, force=True)
+                seed_all_data(days_of_history=90, force=True)
                 # Retrain ML model for the 10 items
                 from ml_model.train import train_demand_forecasting_model
                 train_demand_forecasting_model()

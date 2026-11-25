@@ -1,87 +1,87 @@
 {
-  "timestamp": "2026-11-24T14:34:44.563297+00:00",
+  "timestamp": "2026-11-25T07:39:19.956281+00:00",
   "champion_model": "Gradient Boosting Regressor",
-  "r2_score": 0.9192,
-  "mae": 13.9,
-  "rmse": 22.74,
-  "mape_percent": 12.79,
-  "training_samples": 1800,
-  "train_samples": 1440,
-  "test_samples": 360,
+  "r2_score": 0.9222,
+  "mae": 17.58,
+  "rmse": 28.05,
+  "mape_percent": 14.79,
+  "training_samples": 900,
+  "train_samples": 720,
+  "test_samples": 180,
   "models_compared": {
     "Random Forest Regressor": {
-      "r2_score": 0.9017,
-      "mae": 15.09,
-      "rmse": 25.08,
-      "mape_percent": 13.85
+      "r2_score": 0.8854,
+      "mae": 20.31,
+      "rmse": 34.06,
+      "mape_percent": 16.6
     },
     "Gradient Boosting Regressor": {
-      "r2_score": 0.9192,
-      "mae": 13.9,
-      "rmse": 22.74,
-      "mape_percent": 12.79
+      "r2_score": 0.9222,
+      "mae": 17.58,
+      "rmse": 28.05,
+      "mape_percent": 14.79
     }
   },
   "feature_importances": [
     {
       "feature": "customer_count",
-      "importance": 50.11
+      "importance": 55.68
     },
     {
       "feature": "weather_condition_Sunny",
-      "importance": 13.93
+      "importance": 12.67
     },
     {
       "feature": "unit_price",
-      "importance": 11.5
+      "importance": 11.1
     },
     {
       "feature": "item_id_6",
-      "importance": 5.07
-    },
-    {
-      "feature": "weather_condition_Cloudy",
-      "importance": 2.41
+      "importance": 4.14
     },
     {
       "feature": "item_id_7",
-      "importance": 2.05
-    },
-    {
-      "feature": "category_Snacks",
-      "importance": 1.93
-    },
-    {
-      "feature": "weather_condition_Rainy",
-      "importance": 1.86
-    },
-    {
-      "feature": "day_type_office_party",
-      "importance": 1.55
+      "importance": 4.02
     },
     {
       "feature": "item_id_8",
-      "importance": 1.35
+      "importance": 1.77
     },
     {
-      "feature": "day_of_week",
-      "importance": 1.19
+      "feature": "category_Snacks",
+      "importance": 1.48
     },
     {
-      "feature": "category_Lunch",
-      "importance": 1.18
+      "feature": "day_type_office_party",
+      "importance": 1.26
     },
     {
-      "feature": "day_type_weekend",
-      "importance": 1.06
-    },
-    {
-      "feature": "item_id_9",
+      "feature": "weather_condition_Rainy",
       "importance": 0.86
     },
     {
-      "feature": "item_id_4",
+      "feature": "item_id_9",
+      "importance": 0.78
+    },
+    {
+      "feature": "weather_condition_Cloudy",
+      "importance": 0.76
+    },
+    {
+      "feature": "day_of_week",
       "importance": 0.73
+    },
+    {
+      "feature": "day_type_weekend",
+      "importance": 0.71
+    },
+    {
+      "feature": "month",
+      "importance": 0.61
+    },
+    {
+      "feature": "item_id_4",
+      "importance": 0.48
     }
   ],
   "required_features": [
