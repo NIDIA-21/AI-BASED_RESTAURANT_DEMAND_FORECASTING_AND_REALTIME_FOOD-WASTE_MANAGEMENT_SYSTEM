@@ -84,39 +84,60 @@ class ProductMenu(db.Model):
             return self.image_url.strip()
 
         name_lower = self.item_name.lower()
-        if 'masala dosa' in name_lower or 'dosa' in name_lower:
+        # --- CORRECTED: Verified Indian dish images ---
+        if 'masala dosa' in name_lower or ('dosa' in name_lower and 'masala' in name_lower):
+            # Crispy golden masala dosa with chutneys
+            return "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&auto=format&fit=crop&q=80"
+        elif 'dosa' in name_lower:
+            # Plain/other dosa variant
             return "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&auto=format&fit=crop&q=80"
         elif 'idli' in name_lower:
+            # White steamed idlis with sambar
             return "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=600&auto=format&fit=crop&q=80"
         elif 'poori' in name_lower or 'puri' in name_lower:
-            return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
+            # Puffed golden poori breads — corrected photo
+            return "https://images.unsplash.com/photo-1606755456206-b25206cde27e?w=600&auto=format&fit=crop&q=80"
         elif 'veg meals' in name_lower or 'meals' in name_lower or 'thali' in name_lower:
-            return "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80"
-        elif 'paneer rice' in name_lower or 'paneer' in name_lower:
-            return "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop&q=80"
+            # South Indian vegetarian thali/meals plate — corrected photo
+            return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80"
+        elif 'paneer rice' in name_lower or ('paneer' in name_lower and 'rice' in name_lower):
+            # Paneer fried rice / pulao — corrected photo
+            return "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&auto=format&fit=crop&q=80"
+        elif 'paneer' in name_lower:
+            # Other paneer dishes
+            return "https://images.unsplash.com/photo-1517244683847-7456b63c5969?w=600&auto=format&fit=crop&q=80"
         elif 'samosa' in name_lower:
+            # Crispy golden samosas
             return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
         elif 'sandwich' in name_lower:
+            # Veg sandwich/toasted
             return "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600&auto=format&fit=crop&q=80"
         elif 'coffee' in name_lower:
+            # South Indian filter coffee
             return "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80"
         elif 'tea' in name_lower or 'chai' in name_lower:
+            # Masala chai / Indian tea
             return "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=80"
-        elif 'chapati' in name_lower or 'curry' in name_lower:
-            return "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600&auto=format&fit=crop&q=80"
+        elif 'chapati' in name_lower or ('curry' in name_lower and 'chapati' in name_lower):
+            # Soft chapati with vegetable curry — corrected photo
+            return "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=80"
+        elif 'curry' in name_lower:
+            # Generic curry
+            return "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=80"
 
         cat_lower = self.category.lower()
         if 'breakfast' in cat_lower or 'tiffin' in cat_lower:
             return "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=600&auto=format&fit=crop&q=80"
         elif 'lunch' in cat_lower:
-            return "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80"
+            return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80"
         elif 'snack' in cat_lower:
             return "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600&auto=format&fit=crop&q=80"
         elif 'beverage' in cat_lower:
             return "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80"
         elif 'dinner' in cat_lower:
-            return "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600&auto=format&fit=crop&q=80"
-        return "https://images.unsplash.com/photo-1610057099431-d73a1c9d2f2f?w=600&auto=format&fit=crop&q=80"
+            return "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=80"
+        # Default fallback: Indian vegetarian food spread
+        return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80"
 
     @property
     def profit_margin(self) -> float:

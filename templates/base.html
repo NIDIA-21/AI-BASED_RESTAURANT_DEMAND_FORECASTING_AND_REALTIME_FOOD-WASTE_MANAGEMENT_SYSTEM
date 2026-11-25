@@ -177,6 +177,15 @@
                     </a>
                     {% endif %}
 
+                    {% if active_role in ['admin', 'restaurant_manager'] %}
+                    <a href="{{ url_for('menu.index') }}" 
+                       class="flex items-center px-3 py-2.5 text-xs font-medium rounded-lg transition
+                       {% if request.blueprint == 'menu' %}bg-slate-800 text-emerald-400 font-semibold shadow-inner{% else %}hover:bg-slate-800/60 hover:text-white{% endif %}">
+                        <i class="fa-solid fa-utensils w-5 text-center mr-3 text-sm"></i>
+                        <span>Menu Management</span>
+                    </a>
+                    {% endif %}
+
                     <div class="pt-3 pb-1 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Food Waste Recovery</div>
                     {% if active_role in ['admin', 'restaurant_manager', 'inventory_staff'] %}
                     <a href="{{ url_for('surplus.index') }}" 

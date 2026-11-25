@@ -36,6 +36,7 @@ def create_app(config_class=Config):
     from backend.routes_forecast import forecast_bp
     from backend.routes_surplus import surplus_bp
     from backend.routes_api import api_bp
+    from backend.routes_menu import menu_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -44,6 +45,7 @@ def create_app(config_class=Config):
     app.register_blueprint(forecast_bp)
     app.register_blueprint(surplus_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(menu_bp)
 
     # Custom Jinja filters
     @app.template_filter('currency')

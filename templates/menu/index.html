@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Menu Management - GreenBite Smart Bistro{% endblock %}
+{% block header_title %}Menu Management{% endblock %}
+{% block header_subtitle %}Add new dishes, edit prices/images, or remove underperforming items. AI model auto-retrains on changes.{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h2 class="text-lg font-bold text-slate-800">Restaurant Menu ({{ total_items }} dishes)</h2>
+            <p class="text-sm text-slate-500">Changes here are instantly reflected in POS, Customer Portal & AI Forecasting.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <!-- Manual Retrain Button -->
+            <button onclick="triggerRetrain()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 font-semibold text-sm hover:bg-violet-100 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Retrain AI
+            </button>
+            <!-- Add New Dish -->
+            <a href="{{ url_for('menu.add_dish') }}"
+               class="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 shadow-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add New Dish
+            </a>
+        </div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+        {% for cat, msg in messages %}
+        <div class="rounded-lg px-4 py-3 text-sm font-medium
+            {% if cat == 'success' %}bg-emerald-50 text-emerald-800 border border-emerald-200
+            {% elif cat == 'danger' %}bg-rose-50 text-rose-800 border border-rose-200
+            {% elif cat == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
+            {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+            {{ msg }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- AI Retrain notification area -->
+    <div id="retrain-status" class="hidden rounded-lg px-4 py-3 text-sm font-medium bg-violet-50 text-violet-800 border border-violet-200"></div>
+
+    <!-- Menu Table -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Dish</th>
+                        <th class="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Category</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Price</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Prep Cost</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Margin</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Stock</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Sales Records</th>
+                        <th class="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Status</th>
+                        <th class="text-center px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for row in enriched %}
+                    {% set item = row.item %}
+                    {% set stock = row.stock %}
+                    <tr class="hover:bg-slate-50 transition-colors {% if row.is_new %}bg-emerald-50/40{% endif %}">
+                        <!-- Dish Info -->
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <img src="{{ item.display_image }}" alt="{{ item.item_name }}"
+                                     class="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                                     onerror="this.src='https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&auto=format&fit=crop&q=80'">
+                                <div>
+                                    <div class="font-semibold text-slate-800">{{ item.item_name }}</div>
+                                    <div class="text-xs text-slate-400">ID #{{ item.id }} · {{ item.shelf_life_hours }}h shelf life</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Category -->
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
+                                {{ item.category }}
+                            </span>
+                        </td>
+
+                        <!-- Price -->
+                        <td class="px-4 py-3 text-right font-semibold text-slate-800">{{ currency }}{{ "%.2f"|format(item.unit_price) }}</td>
+
+                        <!-- Prep Cost -->
+                        <td class="px-4 py-3 text-right text-slate-500">{{ currency }}{{ "%.2f"|format(item.standard_prep_cost) }}</td>
+
+                        <!-- Margin -->
+                        <td class="px-4 py-3 text-right">
+                            <span class="font-semibold {% if item.margin_percentage >= 40 %}text-emerald-600{% elif item.margin_percentage >= 20 %}text-amber-600{% else %}text-rose-600{% endif %}">
+                                {{ item.margin_percentage }}%
+                            </span>
+                        </td>
+
+                        <!-- Stock -->
+                        <td class="px-4 py-3 text-right">
+                            {% if stock %}
+                            <span class="font-semibold {% if stock.current_stock_qty <= 0 %}text-rose-600{% elif stock.is_low_stock %}text-amber-600{% else %}text-slate-700{% endif %}">
+                                {{ stock.current_stock_qty }}
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Sales Records -->
+                        <td class="px-4 py-3 text-right">
+                            <span class="text-slate-700 font-medium">{{ row.sales_count }}</span>
+                            <span class="text-slate-400 text-xs"> records</span>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="px-4 py-3">
+                            {% if row.is_new %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                New Dish
+                            </span>
+                            {% elif row.sales_count < 10 %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Low Sales</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">Active</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-1">
+                                <!-- Edit -->
+                                <a href="{{ url_for('menu.edit_dish', item_id=item.id) }}"
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    Edit
+                                </a>
+                                <!-- Delete (opens modal) -->
+                                <button onclick="openDeleteModal('{{ item.id }}', '{{ item.item_name | replace("'", "\\'") }}', {{ row.sales_count }})"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-rose-50 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- AI Info Card -->
+    <div class="bg-gradient-to-r from-violet-50 to-blue-50 rounded-xl border border-violet-200 p-4">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-violet-800 text-sm">How AI Learns New Dishes</h3>
+                <p class="text-violet-700 text-xs mt-1 leading-relaxed">
+                    When a new dish is added, the AI model <strong>retrains immediately</strong> in the background.
+                    Every customer order for the new dish gets recorded in the historical database.
+                    After every <strong>20 orders</strong>, the model automatically retrains again — continuously improving
+                    predictions for <em>all</em> dishes (old and new) based on real sales data.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-800 text-base">Remove Dish from Menu?</h3>
+                <p class="text-slate-500 text-xs" id="deleteSubtitle"></p>
+            </div>
+        </div>
+        <div class="bg-rose-50 rounded-lg border border-rose-200 p-3 mb-4">
+            <p class="text-rose-800 text-xs font-medium">⚠️ This action is permanent. It will remove the dish from the menu, clear all its inventory stock, and delete its historical sales records. The AI model will retrain automatically.</p>
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Type the dish name to confirm:</label>
+            <input type="text" id="confirmNameInput" placeholder="e.g. Dosa and Curry"
+                   class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            <p class="text-xs text-slate-400 mt-1">Must match exactly (case-insensitive).</p>
+        </div>
+        <form id="deleteForm" method="POST">
+            <input type="hidden" name="confirm_name" id="confirmNameHidden">
+            <div class="flex gap-2">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" onclick="submitDelete()"
+                        class="flex-1 px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold text-sm hover:bg-rose-700 transition-colors">
+                    Yes, Remove Dish
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openDeleteModal(itemId, itemName, salesCount) {
+    document.getElementById('deleteModal').classList.remove('hidden');
+    document.getElementById('deleteModal').classList.add('flex');
+    document.getElementById('deleteForm').action = '/menu/delete/' + itemId;
+    document.getElementById('deleteSubtitle').textContent = '"' + itemName + '" — ' + salesCount + ' historical sales records';
+    document.getElementById('confirmNameInput').value = '';
+    document.getElementById('confirmNameInput').focus();
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    document.getElementById('deleteModal').classList.remove('flex');
+}
+
+function submitDelete() {
+    document.getElementById('confirmNameHidden').value = document.getElementById('confirmNameInput').value;
+}
+
+async function triggerRetrain() {
+    const statusDiv = document.getElementById('retrain-status');
+    statusDiv.textContent = 'Starting AI model retraining...';
+    statusDiv.classList.remove('hidden');
+    try {
+        const resp = await fetch('/menu/api/retrain', { method: 'POST' });
+        const data = await resp.json();
+        statusDiv.textContent = data.message;
+    } catch (e) {
+        statusDiv.textContent = 'Retrain request sent. Check server logs for progress.';
+    }
+    setTimeout(() => statusDiv.classList.add('hidden'), 8000);
+}
+
+// Close modal on backdrop click
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+</script>
+{% endblock %}

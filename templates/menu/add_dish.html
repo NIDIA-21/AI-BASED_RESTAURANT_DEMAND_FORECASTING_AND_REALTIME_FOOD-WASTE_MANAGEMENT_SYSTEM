@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Dish - Menu Management{% endblock %}
+{% block header_title %}Add New Dish to Menu{% endblock %}
+{% block header_subtitle %}New dishes appear instantly in POS, Customer Portal & AI Demand Forecasting after saving.{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="space-y-2">
+        {% for cat, msg in messages %}
+        <div class="rounded-lg px-4 py-3 text-sm font-medium
+            {% if cat == 'danger' %}bg-rose-50 text-rose-800 border border-rose-200
+            {% elif cat == 'warning' %}bg-amber-50 text-amber-800 border border-amber-200
+            {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+            {{ msg }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('menu.add_dish') }}" class="space-y-6">
+
+        <!-- Basic Info Card -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-2">Basic Information</h3>
+
+            <!-- Dish Name -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">
+                    Dish Name <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="item_name" id="item_name"
+                       value="{{ form_data.get('item_name', '') }}"
+                       placeholder="e.g., Dosa and Curry, Paneer Butter Masala..."
+                       required maxlength="120"
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                <div id="nameCheck" class="text-xs mt-1 hidden"></div>
+                <p class="text-xs text-slate-400 mt-1">This name appears in POS, customer menu, and AI predictions.</p>
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">
+                    Category <span class="text-rose-500">*</span>
+                </label>
+                <div class="flex gap-2">
+                    <select name="category" id="categorySelect"
+                            class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">-- Select existing category --</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if form_data.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="text-slate-400 text-sm self-center">or</span>
+                    <input type="text" name="new_category" id="newCategory"
+                           value="{{ form_data.get('new_category', '') }}"
+                           placeholder="New category..."
+                           maxlength="60"
+                           class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <p class="text-xs text-slate-400 mt-1">Type a new category if this dish doesn't fit existing ones.</p>
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                <textarea name="description" rows="2" maxlength="255"
+                          placeholder="A short appetizing description shown to customers..."
+                          class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none">{{ form_data.get('description', '') }}</textarea>
+            </div>
+        </div>
+
+        <!-- Pricing Card -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-2">Pricing & Profitability</h3>
+
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Selling Price -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">
+                        Selling Price ({{ currency }}) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="number" name="unit_price" id="unitPrice"
+                           value="{{ form_data.get('unit_price', '') }}"
+                           placeholder="e.g., 80" min="1" step="0.5" required
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <!-- Prep Cost -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">
+                        Preparation Cost ({{ currency }}) <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="number" name="standard_prep_cost" id="prepCost"
+                           value="{{ form_data.get('standard_prep_cost', '') }}"
+                           placeholder="e.g., 35" min="0" step="0.5" required
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+
+            <!-- Live Profit Margin Preview -->
+            <div id="marginPreview" class="hidden rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-semibold text-emerald-800">Profit Margin Preview</span>
+                    <div class="text-right">
+                        <span id="marginAmt" class="text-lg font-bold text-emerald-700"></span>
+                        <span id="marginPct" class="text-sm text-emerald-600 ml-2"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shelf Life -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">
+                    Shelf Life (hours) <span class="text-rose-500">*</span>
+                </label>
+                <input type="number" name="shelf_life_hours"
+                       value="{{ form_data.get('shelf_life_hours', 24) }}"
+                       min="1" max="168" required
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <p class="text-xs text-slate-400 mt-1">How long this dish stays fresh after preparation. Used for waste management.</p>
+            </div>
+        </div>
+
+        <!-- Media & Stock Card -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold text-slate-800 text-base border-b border-slate-100 pb-2">Image & Initial Stock</h3>
+
+            <!-- Image URL -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Photo URL (optional)</label>
+                <input type="url" name="image_url" id="imageUrl"
+                       value="{{ form_data.get('image_url', '') }}"
+                       placeholder="https://images.unsplash.com/... or any public image URL"
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <p class="text-xs text-slate-400 mt-1">Leave blank — the AI will auto-pick a matching photo based on the dish name. Or paste a direct image URL.</p>
+                <!-- Image preview -->
+                <div id="imgPreview" class="mt-2 hidden">
+                    <img id="previewImg" src="" alt="Preview" class="h-24 w-32 object-cover rounded-lg border border-slate-200">
+                </div>
+            </div>
+
+            <!-- Initial Stock -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Initial Stock (portions)</label>
+                    <input type="number" name="initial_stock" value="{{ form_data.get('initial_stock', 50) }}"
+                           min="0" max="9999"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Min Stock Threshold</label>
+                    <input type="number" name="min_threshold" value="{{ form_data.get('min_threshold', 10) }}"
+                           min="0" max="999"
+                           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <p class="text-xs text-slate-400 mt-1">Alert fires when stock drops below this.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Info -->
+        <div class="rounded-xl bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-200 p-4">
+            <div class="flex items-start gap-2">
+                <svg class="w-5 h-5 text-violet-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                <div>
+                    <p class="text-violet-800 text-xs font-semibold">AI Model Auto-Retrains on Save</p>
+                    <p class="text-violet-600 text-xs mt-0.5">The AI demand forecasting model will automatically retrain in the background after you add this dish. Every future order for this dish updates the training data, so predictions improve continuously.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex gap-3">
+            <a href="{{ url_for('menu.index') }}"
+               class="flex-1 text-center px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors">
+                Cancel
+            </a>
+            <button type="submit"
+                    class="flex-1 px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 shadow-sm transition-colors">
+                Add Dish to Menu &amp; Train AI
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Live margin preview
+const priceInput = document.getElementById('unitPrice');
+const costInput = document.getElementById('prepCost');
+const marginDiv = document.getElementById('marginPreview');
+const marginAmt = document.getElementById('marginAmt');
+const marginPct = document.getElementById('marginPct');
+
+function updateMargin() {
+    const price = parseFloat(priceInput.value) || 0;
+    const cost = parseFloat(costInput.value) || 0;
+    if (price > 0 && cost >= 0) {
+        const margin = price - cost;
+        const pct = price > 0 ? ((margin / price) * 100).toFixed(1) : 0;
+        marginAmt.textContent = '\u20B9' + margin.toFixed(2) + ' per portion';
+        marginPct.textContent = '(' + pct + '% margin)';
+        marginDiv.classList.remove('hidden');
+        marginDiv.className = marginDiv.className.replace(/bg-\w+-50|border-\w+-200|text-\w+-\d+/g, '');
+        if (margin > 0 && cost < price) {
+            marginDiv.classList.add('bg-emerald-50', 'border-emerald-200');
+            marginAmt.className = 'text-lg font-bold text-emerald-700';
+        } else {
+            marginDiv.classList.add('bg-rose-50', 'border-rose-200');
+            marginAmt.className = 'text-lg font-bold text-rose-700';
+        }
+    } else {
+        marginDiv.classList.add('hidden');
+    }
+}
+priceInput.addEventListener('input', updateMargin);
+costInput.addEventListener('input', updateMargin);
+
+// Image URL preview
+const imageUrlInput = document.getElementById('imageUrl');
+const imgPreviewDiv = document.getElementById('imgPreview');
+const previewImg = document.getElementById('previewImg');
+imageUrlInput.addEventListener('input', function() {
+    const url = this.value.trim();
+    if (url) {
+        previewImg.src = url;
+        imgPreviewDiv.classList.remove('hidden');
+    } else {
+        imgPreviewDiv.classList.add('hidden');
+    }
+});
+previewImg.addEventListener('error', function() { imgPreviewDiv.classList.add('hidden'); });
+
+// Real-time name availability check
+let nameTimer;
+document.getElementById('item_name').addEventListener('input', function() {
+    clearTimeout(nameTimer);
+    const name = this.value.trim();
+    const checkDiv = document.getElementById('nameCheck');
+    if (name.length < 2) { checkDiv.classList.add('hidden'); return; }
+    nameTimer = setTimeout(async () => {
+        const resp = await fetch('/menu/api/check-name?name=' + encodeURIComponent(name));
+        const data = await resp.json();
+        checkDiv.classList.remove('hidden');
+        checkDiv.textContent = data.message;
+        checkDiv.className = 'text-xs mt-1 ' + (data.available ? 'text-emerald-600' : 'text-rose-600');
+    }, 400);
+});
+</script>
+{% endblock %}
