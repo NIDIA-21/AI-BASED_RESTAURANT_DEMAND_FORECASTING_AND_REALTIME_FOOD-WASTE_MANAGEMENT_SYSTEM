@@ -7,38 +7,54 @@ audit logging via InventoryLog, and reactive Kitchen Display System (KDS) lifecy
 from datetime import datetime, timezone, date
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, session, flash, jsonify
+    url_for, session, flash, jsonify, current_app
 )
 from backend.models import db, ProductMenu, InventoryStock, LiveOrder, User, InventoryLog, HistoricalSalesData
 from backend.auth import login_required, role_required
 from backend.config import Config
-import threading
-
-# ---------------------------------------------------------------------------
-# Auto-retraining helper (triggered every AUTO_RETRAIN_EVERY orders)
-# ---------------------------------------------------------------------------
-AUTO_RETRAIN_EVERY = 20  # Retrain after every 20 new orders placed
-
-def _maybe_retrain(app):
-    """
-    After every AUTO_RETRAIN_EVERY live orders, trigger background ML retraining
-    so the model continuously learns from new sales data including new dishes.
-    """
-    def _run():
-        with app.app_context():
-            try:
-                total_orders = LiveOrder.query.count()
-                if total_orders % AUTO_RETRAIN_EVERY == 0:
-                    from ml_model.train import train_demand_forecasting_model
-                    metrics = train_demand_forecasting_model()
-                    if metrics:
-                        print(f"[ML AUTO-RETRAIN] Triggered after {total_orders} orders. R2={metrics.get('r2_score', 'N/A')}")
-            except Exception as e:
-                print(f"[ML AUTO-RETRAIN] Error: {e}")
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
+from ml_model.train import trigger_async_retrain
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
+
+
+def _sync_order_to_historical_sales(item_id: int, delta_qty: int, order_date: date = None):
+    """
+    Records or adjusts today's live order volume inside HistoricalSalesData so
+    every order for existing or newly added dishes feeds into AI retraining.
+    """
+    target_date = order_date or date.today()
+    day_type = 'weekend' if target_date.weekday() in (4, 5, 6) else 'weekday'
+    baseline_footfall = 210 if day_type == 'weekend' else 85
+
+    day_start = datetime.combine(target_date, datetime.min.time())
+    day_orders_count = LiveOrder.query.filter(
+        LiveOrder.order_time >= day_start,
+        LiveOrder.status != 'cancelled'
+    ).count()
+    estimated_customer_count = max(baseline_footfall, day_orders_count * 3)
+
+    existing_hist = HistoricalSalesData.query.filter_by(
+        date=target_date,
+        item_id=item_id
+    ).first()
+
+    if existing_hist:
+        updated_qty = (existing_hist.actual_qty_ordered or 0) + delta_qty
+        if updated_qty <= 0:
+            db.session.delete(existing_hist)
+        else:
+            existing_hist.actual_qty_ordered = updated_qty
+            existing_hist.customer_count = max(existing_hist.customer_count or 0, estimated_customer_count)
+    elif delta_qty > 0:
+        hist_record = HistoricalSalesData(
+            date=target_date,
+            item_id=item_id,
+            day_type=day_type,
+            customer_count=estimated_customer_count,
+            actual_qty_ordered=delta_qty,
+            weather_condition='Sunny'
+        )
+        db.session.add(hist_record)
 
 
 @orders_bp.route('/pos', methods=['GET'])
@@ -168,50 +184,14 @@ def create_order():
         db.session.add(inv_log)
 
         # (d) Record to HistoricalSalesData — feeds AI model with live order data
-        # This ensures new dishes (and all dishes) get continuously added to training set
-        today_date = date.today()
-        dow = today_date.weekday()  # 0=Monday, 6=Sunday
-        is_weekend = dow >= 5
-
-        # Determine day_type context
-        day_type = 'weekend' if is_weekend else 'weekday'
-
-        # Count today's total customers from orders today as a proxy
-        today_start_dt = datetime.combine(today_date, datetime.min.time())
-        todays_order_count = LiveOrder.query.filter(
-            LiveOrder.order_time >= today_start_dt,
-            LiveOrder.status != 'cancelled'
-        ).count()
-        estimated_customer_count = max(todays_order_count + quantity, 10)
-
-        # Check if we already have a record for today + this item (update instead of duplicate)
-        existing_hist = HistoricalSalesData.query.filter_by(
-            date=today_date,
-            item_id=item_id
-        ).first()
-
-        if existing_hist:
-            # Accumulate today's orders for this dish
-            existing_hist.actual_qty_ordered += quantity
-            existing_hist.customer_count = estimated_customer_count
-        else:
-            # First order for this dish today — create new record
-            hist_record = HistoricalSalesData(
-                date=today_date,
-                item_id=item_id,
-                day_type=day_type,
-                customer_count=estimated_customer_count,
-                actual_qty_ordered=quantity,
-                weather_condition='sunny'  # Default; can be enhanced with weather API
-            )
-            db.session.add(hist_record)
+        # Ensures every customer order (old & new dishes) updates the training dataset immediately.
+        _sync_order_to_historical_sales(item_id, +quantity, date.today())
 
         # Commit entire atomic transaction safely
         db.session.commit()
 
-        # (e) Auto-retrain ML model every AUTO_RETRAIN_EVERY orders (non-blocking)
-        from flask import current_app
-        _maybe_retrain(current_app._get_current_object())
+        # (e) Retrain AI demand forecasting model automatically on every customer order
+        trigger_async_retrain(current_app._get_current_object(), reason=f"order:{product.item_name}")
 
         success_msg = f"Order #{order.id} for {quantity}x '{product.item_name}' ({Config.CURRENCY_SYMBOL}{total_price:.2f}) confirmed and deducted from stock!"
         
@@ -327,6 +307,10 @@ def update_status(order_id, new_status):
                 )
                 db.session.add(inv_log)
 
+            # Revert historical count if cancelled on the order's date
+            order_dt = order.order_time.date() if order.order_time else date.today()
+            _sync_order_to_historical_sales(order.item_id, -order.quantity, order_dt)
+
         # If un-cancelling, deduct stock back
         elif prev_status == 'cancelled' and new_status != 'cancelled':
             inventory = InventoryStock.query.filter_by(item_id=order.item_id).first()
@@ -347,8 +331,14 @@ def update_status(order_id, new_status):
                 )
                 db.session.add(inv_log)
 
+            order_dt = order.order_time.date() if order.order_time else date.today()
+            _sync_order_to_historical_sales(order.item_id, +order.quantity, order_dt)
+
         order.status = new_status
         db.session.commit()
+
+        if new_status == 'cancelled' or prev_status == 'cancelled':
+            trigger_async_retrain(current_app._get_current_object(), reason=f"order_status:{new_status}")
 
         # Recalculate live status counts for dynamic header updates
         status_counts = {

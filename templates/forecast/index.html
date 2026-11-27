@@ -53,6 +53,11 @@
             </form>
 
             <div class="flex items-center space-x-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                <a href="{{ url_for('menu.index') }}" 
+                   class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold rounded-lg transition flex items-center">
+                    <i class="fa-solid fa-utensils mr-1.5 text-emerald-600"></i> Manage Menu
+                </a>
+
                 <a href="{{ url_for('forecast.simulator') }}" 
                    class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg transition flex items-center">
                     <i class="fa-solid fa-sliders mr-1.5 text-emerald-600"></i> What-If Simulator
@@ -141,8 +146,19 @@
                     {% for rec in recommendations %}
                     <tr class="hover:bg-slate-50/80 transition">
                         <td class="px-5 py-3.5">
-                            <span class="font-bold text-slate-900 block text-xs">{{ rec.item_name }}</span>
-                            <span class="text-[10px] text-slate-400">{{ rec.category }}</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-slate-900 text-xs">{{ rec.item_name }}</span>
+                                {% if rec.is_new_dish %}
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[9px] font-bold uppercase tracking-wide" title="Newly added dish — place orders to feed live AI learning">
+                                    New &bull; Starter
+                                </span>
+                                {% elif rec.live_orders_today > 0 %}
+                                <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[9px] font-bold" title="Today's orders are stored in the DB and factored into the retrained model">
+                                    AI Updated ({{ rec.live_orders_today }} ordered today)
+                                </span>
+                                {% endif %}
+                            </div>
+                            <span class="text-[10px] text-slate-400">{{ rec.category }} &bull; {{ rec.historical_records }} historical record(s)</span>
                         </td>
                         <td class="px-4 py-3.5 text-center">
                             <span class="px-2 py-0.5 rounded text-[10px] font-medium
@@ -196,8 +212,12 @@
                     <i class="fa-solid fa-graduation-cap"></i>
                 </div>
                 <div>
-                    <h3 class="text-sm font-bold text-slate-900">Scikit-Learn Model Benchmark & Accuracy</h3>
-                    <p class="text-xs text-slate-500">Trained on {{ metrics.training_samples }} historical sales data points</p>
+                    <h3 class="text-sm font-bold text-slate-900">Scikit-Learn Model Benchmark &amp; Accuracy</h3>
+                    <p class="text-xs text-slate-500">
+                        Trained on <strong>{{ metrics.training_samples }}</strong> historical sales data points
+                        {% if metrics.dishes_learned %} across <strong>{{ metrics.dishes_learned }}</strong> dishes{% endif %}
+                        (auto-retrains after every new order &amp; menu change)
+                    </p>
                 </div>
             </div>
             <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200">

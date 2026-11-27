@@ -60,7 +60,8 @@
                         <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Prep Cost</th>
                         <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Margin</th>
                         <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Stock</th>
-                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Sales Records</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Total Sold</th>
+                        <th class="text-right px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Est. Profit</th>
                         <th class="text-left px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Status</th>
                         <th class="text-center px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Actions</th>
                     </tr>
@@ -114,10 +115,17 @@
                             {% endif %}
                         </td>
 
-                        <!-- Sales Records -->
+                        <!-- Total Sold -->
                         <td class="px-4 py-3 text-right">
-                            <span class="text-slate-700 font-medium">{{ row.sales_count }}</span>
-                            <span class="text-slate-400 text-xs"> records</span>
+                            <span class="text-slate-700 font-semibold">{{ row.total_units_sold }}</span>
+                            <span class="text-slate-400 text-xs"> ({{ row.sales_count }}d)</span>
+                        </td>
+
+                        <!-- Estimated Profit -->
+                        <td class="px-4 py-3 text-right">
+                            <span class="font-semibold {% if row.total_profit <= 0 %}text-slate-400{% elif row.total_units_sold < 10 %}text-amber-600{% else %}text-emerald-700{% endif %}">
+                                {{ currency }}{{ "{:,.0f}".format(row.total_profit) }}
+                            </span>
                         </td>
 
                         <!-- Status Badge -->
@@ -127,7 +135,7 @@
                                 <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                                 New Dish
                             </span>
-                            {% elif row.sales_count < 10 %}
+                            {% elif row.total_units_sold < 25 %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Low Sales</span>
                             {% else %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">Active</span>
@@ -165,12 +173,12 @@
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
             </div>
             <div>
-                <h3 class="font-bold text-violet-800 text-sm">How AI Learns New Dishes</h3>
+                <h3 class="font-bold text-violet-800 text-sm">How AI Continuously Learns Old &amp; New Dishes</h3>
                 <p class="text-violet-700 text-xs mt-1 leading-relaxed">
-                    When a new dish is added, the AI model <strong>retrains immediately</strong> in the background.
-                    Every customer order for the new dish gets recorded in the historical database.
-                    After every <strong>20 orders</strong>, the model automatically retrains again — continuously improving
-                    predictions for <em>all</em> dishes (old and new) based on real sales data.
+                    When you add a brand-new dish (such as <em>Dosa and Curry</em>), it is saved immediately to the menu and database.
+                    <strong>Every single customer order</strong> placed for any dish (old or new) is recorded into the historical sales database
+                    and triggers an automatic AI model retrain — so future predictions on the Forecasting Dashboard always reflect both
+                    older dishes and newly introduced dishes. If a dish underperforms or isn't profitable, delete it anytime here.
                 </p>
             </div>
         </div>
@@ -193,10 +201,12 @@
             <p class="text-rose-800 text-xs font-medium">⚠️ This action is permanent. It will remove the dish from the menu, clear all its inventory stock, and delete its historical sales records. The AI model will retrain automatically.</p>
         </div>
         <div class="mb-4">
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Type the dish name to confirm:</label>
-            <input type="text" id="confirmNameInput" placeholder="e.g. Dosa and Curry"
+            <label class="block text-sm font-semibold text-slate-700 mb-1">
+                Type <span id="confirmTargetName" class="font-bold text-rose-700"></span> to confirm:
+            </label>
+            <input type="text" id="confirmNameInput" placeholder="Enter exact dish name"
                    class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
-            <p class="text-xs text-slate-400 mt-1">Must match exactly (case-insensitive).</p>
+            <p class="text-xs text-slate-400 mt-1">Must match exact dish name (case-insensitive).</p>
         </div>
         <form id="deleteForm" method="POST">
             <input type="hidden" name="confirm_name" id="confirmNameHidden">
@@ -220,8 +230,11 @@ function openDeleteModal(itemId, itemName, salesCount) {
     document.getElementById('deleteModal').classList.add('flex');
     document.getElementById('deleteForm').action = '/menu/delete/' + itemId;
     document.getElementById('deleteSubtitle').textContent = '"' + itemName + '" — ' + salesCount + ' historical sales records';
-    document.getElementById('confirmNameInput').value = '';
-    document.getElementById('confirmNameInput').focus();
+    document.getElementById('confirmTargetName').textContent = '"' + itemName + '"';
+    const inp = document.getElementById('confirmNameInput');
+    inp.value = '';
+    inp.placeholder = itemName;
+    inp.focus();
 }
 
 function closeDeleteModal() {

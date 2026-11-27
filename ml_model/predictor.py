@@ -11,7 +11,7 @@ from datetime import datetime, date, timezone
 from pathlib import Path
 
 from backend.config import Config
-from backend.models import db, ProductMenu, InventoryStock
+from backend.models import db, ProductMenu, InventoryStock, HistoricalSalesData, LiveOrder
 
 MODEL_PATH = Config.MODEL_FILE_PATH
 METRICS_PATH = Config.METRICS_FILE_PATH
@@ -22,27 +22,31 @@ class DemandPredictor:
     Inference engine for food demand prediction and inventory prep optimization.
     """
     _pipeline = None
+    _model_mtime = None
 
     @classmethod
     def get_pipeline(cls):
-        """Lazy load or train model pipeline."""
-        if cls._pipeline is None:
-            if not MODEL_PATH.exists():
-                print("[PREDICTOR] Model artifact not found. Triggering automated model training...")
-                from ml_model.train import train_demand_forecasting_model
-                train_demand_forecasting_model()
+        """Lazy load, auto-reload on disk updates, or train model pipeline."""
+        if not MODEL_PATH.exists():
+            print("[PREDICTOR] Model artifact not found. Triggering automated model training...")
+            from ml_model.train import train_demand_forecasting_model
+            train_demand_forecasting_model()
 
-            if MODEL_PATH.exists():
+        if MODEL_PATH.exists():
+            current_mtime = MODEL_PATH.stat().st_mtime
+            if cls._pipeline is None or cls._model_mtime != current_mtime:
                 cls._pipeline = joblib.load(MODEL_PATH)
-                print(f"[PREDICTOR] Successfully loaded model pipeline from {MODEL_PATH}")
-            else:
-                raise RuntimeError("Failed to load or generate ML model pipeline.")
+                cls._model_mtime = current_mtime
+                print(f"[PREDICTOR] Loaded model pipeline from {MODEL_PATH}")
+        else:
+            raise RuntimeError("Failed to load or generate ML model pipeline.")
         return cls._pipeline
 
     @classmethod
     def reload_pipeline(cls):
         """Forces reload of model pipeline from disk (useful after retraining)."""
         cls._pipeline = None
+        cls._model_mtime = None
         return cls.get_pipeline()
 
     @classmethod
@@ -134,6 +138,25 @@ class DemandPredictor:
             }
 
         # Build batch dataframe for efficient prediction
+        # Also gather historical data count & live orders today per dish so we know
+        # whether a dish is brand-new (0 sales history) vs actively learned by the AI model.
+        hist_counts = dict(
+            db.session.query(
+                HistoricalSalesData.item_id,
+                db.func.count(HistoricalSalesData.id)
+            ).group_by(HistoricalSalesData.item_id).all()
+        )
+        today_start_dt = datetime.combine(date.today(), datetime.min.time())
+        live_today_counts = dict(
+            db.session.query(
+                LiveOrder.item_id,
+                db.func.coalesce(db.func.sum(LiveOrder.quantity), 0)
+            ).filter(
+                LiveOrder.order_time >= today_start_dt,
+                LiveOrder.status != 'cancelled'
+            ).group_by(LiveOrder.item_id).all()
+        )
+
         batch_rows = []
         for item in menu_items:
             batch_rows.append({
@@ -158,7 +181,15 @@ class DemandPredictor:
         total_buffer_units = 0
 
         for i, item in enumerate(menu_items):
+            hist_records = int(hist_counts.get(item.id, 0))
+            live_today = int(live_today_counts.get(item.id, 0))
             pred_demand = max(1, int(round(raw_predictions[i])))
+            # For brand-new dishes with zero historical orders yet, keep starter batch conservative
+            # until real customer orders feed into the database and retrain the model.
+            if hist_records == 0:
+                starter_cap = max(5, int(round(customer_count * 0.12)))
+                pred_demand = min(pred_demand, starter_cap)
+
             buffer_units = int(math.ceil(pred_demand * safety_buffer_pct))
             target_prep_pool = pred_demand + buffer_units
 
@@ -209,7 +240,10 @@ class DemandPredictor:
                 'expected_revenue': item_exp_rev,
                 'projected_profit': item_profit,
                 'stock_alert': stock_alert,
-                'badge_color': badge_color
+                'badge_color': badge_color,
+                'historical_records': hist_records,
+                'live_orders_today': live_today,
+                'is_new_dish': hist_records == 0
             }
 
             recommendations.append(recommendation_item)

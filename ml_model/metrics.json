@@ -1,87 +1,88 @@
 {
-  "timestamp": "2026-11-25T13:51:31.212715+00:00",
+  "timestamp": "2026-11-27T11:50:05.737994+00:00",
   "champion_model": "Gradient Boosting Regressor",
-  "r2_score": 0.9222,
-  "mae": 17.58,
-  "rmse": 28.05,
-  "mape_percent": 14.79,
+  "r2_score": 0.9325,
+  "mae": 17.3,
+  "rmse": 26.35,
+  "mape_percent": 13.67,
   "training_samples": 900,
+  "dishes_learned": 10,
   "train_samples": 720,
   "test_samples": 180,
   "models_compared": {
     "Random Forest Regressor": {
-      "r2_score": 0.8854,
-      "mae": 20.31,
-      "rmse": 34.06,
-      "mape_percent": 16.6
+      "r2_score": 0.9154,
+      "mae": 18.31,
+      "rmse": 29.5,
+      "mape_percent": 13.93
     },
     "Gradient Boosting Regressor": {
-      "r2_score": 0.9222,
-      "mae": 17.58,
-      "rmse": 28.05,
-      "mape_percent": 14.79
+      "r2_score": 0.9325,
+      "mae": 17.3,
+      "rmse": 26.35,
+      "mape_percent": 13.67
     }
   },
   "feature_importances": [
     {
       "feature": "customer_count",
-      "importance": 55.68
+      "importance": 54.93
     },
     {
       "feature": "weather_condition_Sunny",
-      "importance": 12.67
+      "importance": 12.06
     },
     {
       "feature": "unit_price",
-      "importance": 11.1
-    },
-    {
-      "feature": "item_id_6",
-      "importance": 4.14
+      "importance": 11.17
     },
     {
       "feature": "item_id_7",
-      "importance": 4.02
+      "importance": 4.17
+    },
+    {
+      "feature": "item_id_6",
+      "importance": 3.89
     },
     {
       "feature": "item_id_8",
-      "importance": 1.77
-    },
-    {
-      "feature": "category_Snacks",
-      "importance": 1.48
-    },
-    {
-      "feature": "day_type_office_party",
-      "importance": 1.26
+      "importance": 2.27
     },
     {
       "feature": "weather_condition_Rainy",
-      "importance": 0.86
+      "importance": 1.2
+    },
+    {
+      "feature": "category_Snacks",
+      "importance": 1.2
     },
     {
       "feature": "item_id_9",
-      "importance": 0.78
+      "importance": 1.19
+    },
+    {
+      "feature": "day_type_office_party",
+      "importance": 1.15
     },
     {
       "feature": "weather_condition_Cloudy",
-      "importance": 0.76
+      "importance": 0.92
     },
     {
       "feature": "day_of_week",
-      "importance": 0.73
-    },
-    {
-      "feature": "day_type_weekend",
-      "importance": 0.71
+      "importance": 0.89
     },
     {
       "feature": "month",
-      "importance": 0.61
+      "importance": 0.66
+    },
+    {
+      "feature": "day_type_weekend",
+      "importance": 0.59
     },
     {
       "feature": "item_id_4",
-      "importance": 0.48
+      "importance": 0.52
     }
   ],
   "required_features": [

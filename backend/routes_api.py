@@ -72,8 +72,8 @@ def chart_demand_vs_actual():
     actual_values = []
     current_stocks = []
 
-    # Sort by predicted demand descending, limit to top 10 items for clean graph
-    sorted_recs = sorted(recommendations, key=lambda x: x['predicted_demand'], reverse=True)[:10]
+    # Sort by predicted demand descending, include all active menu items (both existing and newly added dishes)
+    sorted_recs = sorted(recommendations, key=lambda x: x['predicted_demand'], reverse=True)
 
     for r in sorted_recs:
         labels.append(r['item_name'])

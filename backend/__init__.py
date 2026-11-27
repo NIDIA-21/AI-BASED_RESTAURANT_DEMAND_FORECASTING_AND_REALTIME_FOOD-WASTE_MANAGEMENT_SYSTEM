@@ -88,12 +88,12 @@ def create_app(config_class=Config):
             # Create tables if not existing
             db.create_all()
 
-            # Check if seed data exists and matches the exact 10 menu items
-            if ProductMenu.query.count() != 10:
-                print("[STARTUP] Synchronizing database with 10 Indian Menu Items & Food Waste schema...")
+            # Seed initial menu & synthetic history only when the database has no menu items yet
+            # (preserves manager-added or deleted dishes across server restarts)
+            if ProductMenu.query.count() == 0:
+                print("[STARTUP] Seeding database with initial Indian Menu Items & Food Waste schema...")
                 from database.seed_data import seed_all_data
                 seed_all_data(days_of_history=90, force=True)
-                # Retrain ML model for the 10 items
                 from ml_model.train import train_demand_forecasting_model
                 train_demand_forecasting_model()
             elif not Config.MODEL_FILE_PATH.exists():
